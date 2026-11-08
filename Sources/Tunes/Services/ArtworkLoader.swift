@@ -118,8 +118,8 @@ public final class ArtworkLoader: ObservableObject {
         var totalB: CGFloat = 0
         var count: CGFloat = 0
 
-        // Sample the bottom rows (y: 0 to 5, where y=0 is the bottom edge in CGContext)
-        for y in 0..<6 {
+        // Sample the top rows (y: 10 to 15, where y=15 is the top edge in CGContext)
+        for y in 10..<height {
             for x in 0..<width {
                 let offset = (y * width + x) * 4
                 let a = CGFloat(rawData[offset + 3]) / 255.0
