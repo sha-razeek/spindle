@@ -76,11 +76,9 @@ public struct CoverStackView: View {
                                     LazyVStack(spacing: 0) {
                                         ForEach(albums) { album in
                                             let isPopped = (poppedOutAlbumID == album.id)
-                                            let isOtherPopped = (poppedOutAlbumID != nil && !isPopped)
                                             AlbumSlabView(
                                                 album: album,
                                                 isPoppedOut: isPopped,
-                                                isOtherAlbumPoppedOut: isOtherPopped,
                                                 player: player,
                                                 onTogglePopOut: {
                                                     handleAlbumClick(album: album, proxy: proxy)
@@ -100,19 +98,6 @@ public struct CoverStackView: View {
                                 .frame(maxWidth: .infinity)
                             }
                             .coordinateSpace(name: "CoverScrollSpace")
-                            // Gradient Alpha Mask: Eliminates sudden appearance at bottom/top
-                            .mask(
-                                LinearGradient(
-                                    stops: [
-                                        .init(color: .clear, location: 0.0),
-                                        .init(color: .black, location: 0.06),
-                                        .init(color: .black, location: 0.88),
-                                        .init(color: .clear, location: 0.98)
-                                    ],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            )
                             // Track scroll offset changes -> Retract when user scrolls manually
                             .onPreferenceChange(ScrollOffsetKey.self) { currentY in
                                 if isProgrammaticScroll {
@@ -124,22 +109,6 @@ public struct CoverStackView: View {
                                     lastScrollY = currentY
                                 }
                             }
-                        }
-
-                        // Bottom Atmospheric Gradient Fade: Albums dissolve smoothly into darkness
-                        VStack {
-                            Spacer()
-                            LinearGradient(
-                                colors: [
-                                    Color.clear,
-                                    Color(red: 0.09, green: 0.14, blue: 0.18).opacity(0.85),
-                                    Color(red: 0.09, green: 0.14, blue: 0.18)
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                            .frame(height: 90)
-                            .allowsHitTesting(false)
                         }
                     }
                 }
