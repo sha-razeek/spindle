@@ -93,6 +93,19 @@ public struct ExpandedNowPlayingView: View {
                 }
             }
 
+            // MARK: - Audio Spectrum Curve at Bottom
+            VStack {
+                Spacer()
+                SpectrumCurveView(
+                    isPlaying: player.isPlaying,
+                    accentColor: paletteColors.c1,
+                    secondaryColor: paletteColors.c2
+                )
+                .frame(height: 120)
+                .allowsHitTesting(false)
+            }
+            .ignoresSafeArea(edges: .bottom)
+
             // MARK: - Content
             VStack(spacing: 0) {
                 // Top Header Bar
