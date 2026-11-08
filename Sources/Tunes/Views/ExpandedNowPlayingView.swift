@@ -7,8 +7,6 @@ public struct ExpandedNowPlayingView: View {
     @Binding var isPresented: Bool
 
     @State private var animateGradients: Bool = false
-    @State private var isDraggingScrubber: Bool = false
-    @State private var scrubTime: TimeInterval = 0
 
     private var currentSong: Song? {
         player.currentSong
@@ -93,18 +91,25 @@ public struct ExpandedNowPlayingView: View {
                 }
             }
 
-            // MARK: - Audio Spectrum Curve at Bottom
-            VStack {
-                Spacer()
-                SpectrumCurveView(
-                    isPlaying: player.isPlaying,
-                    accentColor: paletteColors.c1,
-                    secondaryColor: paletteColors.c2
-                )
-                .frame(height: 120)
-                .allowsHitTesting(false)
+            // MARK: - Static Spectrogram Seeker at Bottom
+            if let song = currentSong {
+                VStack {
+                    Spacer()
+                    SpectrogramSeekerView(
+                        song: song,
+                        currentTime: player.currentTime,
+                        duration: player.duration,
+                        isPlaying: player.isPlaying,
+                        accentColor: paletteColors.c1,
+                        secondaryColor: paletteColors.c2,
+                        onSeek: { targetTime in
+                            player.seek(to: targetTime)
+                        }
+                    )
+                    .frame(height: 110)
+                }
+                .ignoresSafeArea(edges: .bottom)
             }
-            .ignoresSafeArea(edges: .bottom)
 
             // MARK: - Content
             VStack(spacing: 0) {
@@ -182,37 +187,6 @@ public struct ExpandedNowPlayingView: View {
                                         .lineLimit(1)
                                 }
                                 .frame(width: 360, alignment: .leading)
-
-                                // Minimal Scrubber Slider (no full button list)
-                                VStack(spacing: 8) {
-                                    Slider(
-                                        value: Binding(
-                                            get: { isDraggingScrubber ? scrubTime : player.currentTime },
-                                            set: { scrubTime = $0 }
-                                        ),
-                                        in: 0...max(1.0, player.duration),
-                                        onEditingChanged: { editing in
-                                            isDraggingScrubber = editing
-                                            if !editing {
-                                                player.seek(to: scrubTime)
-                                            } else {
-                                                scrubTime = player.currentTime
-                                            }
-                                        }
-                                    )
-                                    .accentColor(.white)
-
-                                    HStack {
-                                        Text(isDraggingScrubber ? formatSeconds(scrubTime) : player.formattedCurrentTime)
-                                            .font(.system(size: 11))
-                                            .foregroundColor(.white.opacity(0.65))
-                                        Spacer()
-                                        Text(player.formattedRemainingTime)
-                                            .font(.system(size: 11))
-                                            .foregroundColor(.white.opacity(0.65))
-                                    }
-                                }
-                                .frame(width: 360)
                             }
                             .frame(width: 360)
 
@@ -348,12 +322,5 @@ public struct ExpandedNowPlayingView: View {
                 .foregroundColor(.white.opacity(0.9))
                 .lineLimit(1)
         }
-    }
-
-    private func formatSeconds(_ seconds: TimeInterval) -> String {
-        let total = Int(seconds)
-        let m = total / 60
-        let s = total % 60
-        return String(format: "%d:%02d", m, s)
     }
 }

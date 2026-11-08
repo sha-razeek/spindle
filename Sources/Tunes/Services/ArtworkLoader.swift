@@ -3,6 +3,7 @@ import AppKit
 import SwiftUI
 import iTunesLibrary
 import AVFoundation
+import ImageIO
 
 public final class SpineColors: NSObject {
     public let bg: Color
@@ -20,14 +21,25 @@ public final class ArtworkLoader: ObservableObject {
     private let cache = NSCache<NSString, NSImage>()
     private let colorCache = NSCache<NSString, SpineColors>()
     private var itunesLibrary: ITLibrary?
+    private var itemsByPID: [UInt64: ITLibMediaItem] = [:]
 
     public init() {
-        cache.countLimit = 500
-        colorCache.countLimit = 1000
+        cache.countLimit = 1500
+        colorCache.countLimit = 3000
     }
 
     public func setLibrary(_ library: ITLibrary?) {
         self.itunesLibrary = library
+        guard let library = library else {
+            self.itemsByPID = [:]
+            return
+        }
+        var map: [UInt64: ITLibMediaItem] = [:]
+        map.reserveCapacity(library.allMediaItems.count)
+        for item in library.allMediaItems {
+            map[item.persistentID.uint64Value] = item
+        }
+        self.itemsByPID = map
     }
 
     public func cachedImage(for song: Song) -> NSImage? {
@@ -40,37 +52,65 @@ public final class ArtworkLoader: ObservableObject {
             return cached
         }
 
-        // Try ITLibrary directly
-        if let library = itunesLibrary {
-            let pidNumber = NSNumber(value: song.persistentID)
-            if let itItem = library.allMediaItems.first(where: { $0.persistentID == pidNumber }) {
-                if let art = itItem.artwork {
-                    if let img = art.image {
-                        cache.setObject(img, forKey: key)
-                        let colors = extractSpineColor(from: img)
-                        colorCache.setObject(SpineColors(bg: colors.bg, text: colors.text), forKey: key)
-                        return img
-                    } else if let data = art.imageData, let img = NSImage(data: data) {
-                        cache.setObject(img, forKey: key)
-                        let colors = extractSpineColor(from: img)
-                        colorCache.setObject(SpineColors(bg: colors.bg, text: colors.text), forKey: key)
-                        return img
-                    }
-                }
+        // Instant O(1) lookup via PID index
+        if let itItem = itemsByPID[UInt64(song.persistentID)], let art = itItem.artwork {
+            if let data = art.imageData, let img = createThumbnail(from: data, maxPixelSize: 600) {
+                cache.setObject(img, forKey: key)
+                let colors = extractSpineColor(from: img)
+                colorCache.setObject(SpineColors(bg: colors.bg, text: colors.text), forKey: key)
+                return img
+            } else if let img = art.image {
+                let thumb = downsample(image: img, maxPixelSize: 600)
+                cache.setObject(thumb, forKey: key)
+                let colors = extractSpineColor(from: thumb)
+                colorCache.setObject(SpineColors(bg: colors.bg, text: colors.text), forKey: key)
+                return thumb
             }
         }
 
         // Fallback: extract embedded artwork directly from the audio file using AVAsset
         if let location = song.location {
             if let img = await extractArtworkFromFile(url: location) {
-                cache.setObject(img, forKey: key)
-                let colors = extractSpineColor(from: img)
+                let thumb = downsample(image: img, maxPixelSize: 600)
+                cache.setObject(thumb, forKey: key)
+                let colors = extractSpineColor(from: thumb)
                 colorCache.setObject(SpineColors(bg: colors.bg, text: colors.text), forKey: key)
-                return img
+                return thumb
             }
         }
 
         return nil
+    }
+
+    private func createThumbnail(from data: Data, maxPixelSize: CGFloat = 600) -> NSImage? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
+            return NSImage(data: data)
+        }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
+            kCGImageSourceCreateThumbnailWithTransform: true
+        ]
+        guard let cgThumb = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            return NSImage(data: data)
+        }
+        return NSImage(cgImage: cgThumb, size: NSSize(width: maxPixelSize, height: maxPixelSize))
+    }
+
+    private func downsample(image: NSImage, maxPixelSize: CGFloat = 600) -> NSImage {
+        guard let tiff = image.tiffRepresentation,
+              let source = CGImageSourceCreateWithData(tiff as CFData, nil) else {
+            return image
+        }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
+            kCGImageSourceCreateThumbnailWithTransform: true
+        ]
+        guard let cgThumb = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            return image
+        }
+        return NSImage(cgImage: cgThumb, size: NSSize(width: maxPixelSize, height: maxPixelSize))
     }
 
     public func spineColors(for song: Song?, fallbackID: String) -> (bg: Color, text: Color) {

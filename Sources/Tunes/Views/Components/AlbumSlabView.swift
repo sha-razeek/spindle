@@ -35,16 +35,16 @@ public struct AlbumSlabView: View {
     public var body: some View {
         let isDiscPoppedOut = isPoppedOut && isCurrentlyPlayingThisAlbum
 
-        ZStack(alignment: .topLeading) {
+        ZStack(alignment: .top) {
             // MARK: - 1. Spinning White Vinyl Record (slides out to the right only on play)
             VinylDiscView(
                 artwork: artworkImage,
                 isPlaying: isCurrentlyPlayingThisAlbum && player.isPlaying,
-                size: 440
+                size: 470
             )
             .position(
-                x: isDiscPoppedOut ? 410 : 240,
-                y: isDiscPoppedOut ? 246 : 150
+                x: isDiscPoppedOut ? 540 : 390,
+                y: isDiscPoppedOut ? 266 : 160
             )
             .opacity(isDiscPoppedOut ? 1.0 : 0.0)
             .animation(.spring(response: 0.40, dampingFraction: 0.75), value: isDiscPoppedOut)
@@ -84,7 +84,7 @@ public struct AlbumSlabView: View {
                         .cornerRadius(4)
                 }
                 .padding(.horizontal, 14)
-                .frame(width: 480, height: 32)
+                .frame(width: 520, height: 32)
                 .background(spineBgColor)
                 .overlay(
                     // 3D tactile bevel edges
@@ -200,7 +200,7 @@ public struct AlbumSlabView: View {
                         .transition(.scale.combined(with: .opacity))
                     }
                 }
-                .frame(width: 480, height: isPoppedOut ? 460 : 240)
+                .frame(width: 520, height: isPoppedOut ? 500 : 260)
                 .clipped()
                 .overlay(
                     // Clean sleeve side borders
@@ -211,7 +211,7 @@ public struct AlbumSlabView: View {
                     }
                 )
             }
-            .frame(width: 480)
+            .frame(width: 520)
             .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
             .rotation3DEffect(
                 .degrees(isPoppedOut ? 0 : -28),
@@ -227,7 +227,7 @@ public struct AlbumSlabView: View {
             )
         }
         // Expand the row slot when popped out so the whole cover, white vinyl disc, and controls are visible!
-        .frame(width: 650, height: isPoppedOut ? 530 : 88, alignment: .top)
+        .frame(width: 780, height: isPoppedOut ? 570 : 96, alignment: .top)
         .offset(y: (isHovered && !isPoppedOut) ? -4 : 0)
         .zIndex(isPoppedOut ? 999 : 0)
         .animation(.spring(response: 0.38, dampingFraction: 0.75), value: isPoppedOut)
