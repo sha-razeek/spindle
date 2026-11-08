@@ -1,60 +1,44 @@
-# Tunes — Native macOS Local Music Player
+# Spindle
 
-A lightweight, high-performance native macOS music player built in SwiftUI. **Tunes** interfaces directly with your existing Apple Music library, giving you instant access to your entire music collection with **zero storage duplication**.
-
----
-
-## Can It Access the Same Library as Apple Music Without Duplication?
-
-**Yes, completely and natively.**
-
-Apple provides the official **`iTunesLibrary.framework` (`ITLibrary`)** on macOS for this exact purpose:
-
-1. **Zero Database Duplication**: `Tunes` loads metadata directly from Apple Music's central library (`ITLibrary(apiVersion: "1.0")`). Songs, album titles, artists, genres, track numbers, and playlists are read directly from the existing database.
-2. **Zero Audio File Duplication**: Every track in `ITLibrary` provides a `location` URL pointing to the actual local audio file on your disk (e.g. `~/Music/Music/Media.localized/...` or an external drive like `/Volumes/Vault/...`). Playback streams directly from the existing files via `AVPlayer`.
-3. **Zero Artwork Duplication**: `ITLibArtwork` provides cached album art (`art.image` / `art.imageData`) directly from Apple Music's cache. If a track's artwork is embedded in the audio file tags instead, `Tunes` automatically extracts it on demand without saving duplicate copies.
-4. **Local vs DRM Files**:
-   - **Local Files (MP3, AAC/M4A, ALAC, WAV, AIFF, ripped CDs, purchases)**: Fully accessible and playable.
-   - **Apple Music Streaming Cache (FairPlay DRM `.m4p`)**: DRM-protected streaming subscription tracks cannot be decoded outside Apple's FairPlay pipeline. `Tunes` filters or identifies these so your player focuses smoothly on your DRM-free local library.
+A fast, lightweight, and tactile native macOS music player built with SwiftUI. **Spindle** is designed for music lovers who appreciate the physical experience of vinyl and album sleeves while seamlessly interfacing with their local **Apple Music Library** with **zero storage duplication**.
 
 ---
 
-## App Features
+## Direct Apple Music Library Integration
 
-- **Direct Apple Music Integration**: Automatically imports your local songs, albums, artists, and playlists.
-- **High-Fidelity Audio Engine**: Built on `AVFoundation` with instant seeking, volume control, repeat modes (Off, All, One), and shuffle.
-- **Now Playing & Keyboard Controls**:
-  - Full macOS **Control Center** and **Touch Bar / Media Key** integration via `MPRemoteCommandCenter` (F7 Prev, F8 Play/Pause, F9 Next, Spacebar).
-  - macOS **Now Playing** info center (`MPNowPlayingInfoCenter`) updating track title, artist, elapsed time, and artwork.
-- **Sleek macOS UI**:
-  - **3D Cover Stack View**: An immersive 3D cascading perspective browser inspired by physical record stacks with color-sampled front spines, studio lighting, and smooth scrolling.
-  - **Songs View**: Sortable table with Title, Artist, Album, and Duration with search filtering.
-  - **Albums View**: Responsive album cover grid with view switcher between Grid and 3D Stack.
-  - **Artists View**: Two-pane discography browser by artist.
-  - **Playlists View**: Preserves playlist order from Apple Music.
-  - **Up Next Queue**: Flyout popover showing upcoming tracks with instant track selection.
-  - **Reveal in Finder**: Direct button to locate the original audio file in Finder.
+Spindle connects directly to your existing Apple Music library using macOS's native `iTunesLibrary.framework` (`ITLibrary`):
+
+- **Zero Database Duplication**: Spindle reads song metadata, album titles, artists, genres, track sequencing, and playlists directly from your existing Apple Music database.
+- **Zero Audio Duplication**: Playback streams directly from original audio files on your disk (including external hard drives and network storage) via `AVFoundation`.
+- **Zero Artwork Duplication**: Leverages cached album art directly from Apple Music's cache with fast $O(1)$ persistent ID lookups and hardware-accelerated downsampling.
+- **Local & Lossless Playback**: Full native support for local MP3, AAC, ALAC (Apple Lossless), FLAC, WAV, AIFF, and purchased music files. *(FairPlay DRM-protected subscription streams are excluded as they cannot be decoded outside Apple's proprietary playback sandbox).*
 
 ---
 
-## Quick Start
+## Key Features
 
-### 1. Launch the Pre-built App
-```bash
-open build/Tunes.app
-```
-*(Or drag `build/Tunes.app` to `/Applications`)*
+### 3D Vinyl Drawer
+- **Physical Perspective Stack**: An interactive vertical stack of album jackets tilted in true 3D space, inspired by browsing physical vinyl records in a collector's drawer.
+- **Die-Cut Sleeve Thumb Notch**: Features an authentic die-cut thumb cut-out on the right jacket opening, revealing the inner sleeve and vinyl grooves.
+- **Spinning White Vinyl LP**: On playback, a pearlescent white vinyl record with micro-etched concentric sound grooves and custom center label smoothly slides out from the sleeve and spins.
+- **Dynamic Ambient Backdrop**: The entire drawer view background dynamically morphs to reflect the palette of the currently playing album, complete with a luminous atmospheric spotlight aura.
+- **Tactile Spine Navigation**: Click any album to smoothly center it in the viewport with spring physics and automatic viewport alignment.
 
-### 2. Building from Source
-Run the included build script to compile the release binary, generate the app icon, and assemble the `.app` bundle:
-```bash
-./scripts/build_app.sh
-```
+### Expanded Now Playing & Spectrogram Seeker
+- **Waveform Spectrogram Seeker**: Visualizes the track's audio profile via high-resolution RMS audio analysis, revealing a smooth Catmull-Rom spline curve that doubles as an interactive scrubbing seeker.
+- **Dynamic Living Motion Gradients**: Ambient fluid lighting that shifts subtly with the music.
+- **Minimal, Typography-First Details**: Left-aligned tracklist and metadata without clutter or monospace typefaces.
 
-Or build with Swift Package Manager:
-```bash
-swift build
-```
+### macOS System Integration
+- **Media Keys & Control Center**: Full integration with `MPRemoteCommandCenter` (Play/Pause, Next, Previous, Scrubbing) and Touch Bar/keyboard media keys (F7, F8, F9).
+- **Now Playing Info Center**: Publishes active song title, artist, album, duration, elapsed playback time, and artwork to macOS Control Center and lock screen.
+- **Library Views**:
+  - **Songs**: Searchable, sortable list view with real-time filtering.
+  - **Albums**: Responsive grid view with instant album detail inspection.
+  - **3D Covers**: Physical vinyl drawer browser.
+  - **Artists**: Two-pane discography navigator.
+  - **Playlists**: Preserves custom playlist order directly from Apple Music.
+- **Reveal in Finder**: Quickly jump straight to the source audio file in Finder.
 
 ---
 
@@ -66,44 +50,81 @@ swift build
 | `Cmd + Right Arrow` | Next Track |
 | `Cmd + Left Arrow` | Previous Track |
 | `Cmd + Shift + S` | Toggle Shuffle |
-| `Cmd + Shift + R` | Cycle Repeat Mode |
+| `Cmd + Shift + R` | Cycle Repeat Mode (Off / All / One) |
 
 ---
 
-## Project Structure
+## Building from Source
+
+### Prerequisites
+- macOS 14.0 (Sonoma) or later
+- Xcode 15+ / Command Line Tools with Swift 5.9+
+
+### Build & Package Application
+Compile the release binary, generate the high-resolution turntable app icon, and assemble the standalone `.app` bundle:
+
+```bash
+./scripts/build_app.sh
+```
+
+The output will be placed at `build/Spindle.app` (or `build/Tunes.app`). You can drag it to `/Applications` or open it directly:
+
+```bash
+open build/Tunes.app
+```
+
+### Swift Package Manager
+To build the raw binary directly with SPM:
+
+```bash
+swift build -c release
+```
+
+---
+
+## Architecture & Project Structure
 
 ```
-Tunes/
-├── Package.swift                  # Swift Package Manager definition
+spindle/
+├── Package.swift                  # Swift Package Manager manifest
 ├── Sources/
 │   └── Tunes/
-│       ├── App.swift              # App entry point & menu shortcuts
+│       ├── App.swift              # App lifecycle & global keyboard commands
 │       ├── Models/
 │       │   ├── Song.swift         # Song model wrapping ITLibMediaItem
-│       │   ├── Album.swift        # Album grouping & sorting
+│       │   ├── Album.swift        # Album hierarchy & sorting
 │       │   ├── Artist.swift       # Artist discography grouping
 │       │   └── Playlist.swift     # Playlist representation
 │       ├── Services/
-│       │   ├── LibraryManager.swift # ITLibrary loader & search index
-│       │   ├── AudioPlayer.swift    # AVPlayer, MPRemoteCommandCenter
-│       │   └── ArtworkLoader.swift  # Thread-safe artwork cache
+│       │   ├── LibraryManager.swift     # iTunesLibrary loader & search index
+│       │   ├── AudioPlayer.swift        # AVPlayer & MPRemoteCommandCenter
+│       │   ├── ArtworkLoader.swift      # $O(1)$ artwork cache & palette extractor
+│       │   └── AudioSpectrogramLoader.swift # AVAssetReader audio wave analyzer
 │       └── Views/
-│           ├── ContentView.swift    # NavigationSplitView & sidebar
-│           ├── SongsListView.swift  # Sortable songs table
-│           ├── AlbumsGridView.swift # Album grid
-│           ├── AlbumDetailView.swift# Album detail page
-│           ├── ArtistsView.swift    # Artist discography view
+│           ├── ContentView.swift        # NavigationSplitView & sidebar
+│           ├── CoverStackView.swift     # 3D Vinyl Drawer view
+│           ├── ExpandedNowPlayingView.swift # Full-screen now playing experience
+│           ├── AlbumsGridView.swift     # Standard album grid
+│           ├── AlbumDetailView.swift    # Album tracklist & details
+│           ├── SongsListView.swift      # Sortable song library table
+│           ├── ArtistsView.swift        # Artist discography view
 │           ├── PlaylistDetailView.swift # Playlist tracklist
-│           ├── NowPlayingBar.swift  # Bottom transport bar & scrubber
-│           ├── QueuePopoverView.swift # Up Next queue popover
+│           ├── NowPlayingBar.swift      # Bottom transport bar & album thumbnail
+│           ├── QueuePopoverView.swift   # Up Next queue popover
 │           └── Components/
-│               └── ArtworkView.swift # Async album art display
+│               ├── AlbumSlabView.swift  # 3D album slab with notch cutout
+│               ├── VinylDiscView.swift  # Spinning pearlescent white LP disc
+│               └── SpectrogramSeekerView.swift # Catmull-Rom spline wave seeker
 ├── Resources/
-│   ├── Info.plist                 # Permissions & bundle metadata
-│   └── AppIcon.icns               # Multi-resolution macOS app icon
-├── scripts/
-│   ├── build_app.sh               # App bundle packaging & codesign
-│   └── generate_icon.swift        # Icon generator script
-└── build/
-    └── Tunes.app                  # Standalone runnable macOS Application
+│   ├── Info.plist                 # Bundle metadata & permissions
+│   └── AppIcon.icns               # Top-down turntable app icon
+└── scripts/
+    ├── build_app.sh               # Build, bundle, and sign script
+    └── generate_icon.swift        # App icon generator
 ```
+
+---
+
+## License
+
+MIT License. See [LICENSE](LICENSE) for details.
