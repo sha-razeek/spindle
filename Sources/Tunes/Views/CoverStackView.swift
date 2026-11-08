@@ -10,7 +10,6 @@ private struct ScrollOffsetKey: PreferenceKey {
 public struct CoverStackView: View {
     let albums: [Album]
     @ObservedObject var player: AudioPlayer
-    @ObservedObject private var artworkLoader = ArtworkLoader.shared
 
     @State private var selectedAlbumForDetail: Album?
     @State private var poppedOutAlbumID: String? = nil
@@ -113,15 +112,17 @@ public struct CoverStackView: View {
                         ScrollViewReader { proxy in
                             ScrollView(.vertical, showsIndicators: false) {
                                 VStack(spacing: 0) {
-                                    // Scroll tracker anchor at the top
-                                    GeometryReader { geo in
-                                        Color.clear
-                                            .preference(
-                                                key: ScrollOffsetKey.self,
-                                                value: geo.frame(in: .named("CoverScrollSpace")).minY
-                                            )
+                                    // Scroll tracker anchor at the top - only track when an album is popped out
+                                    if poppedOutAlbumID != nil {
+                                        GeometryReader { geo in
+                                            Color.clear
+                                                .preference(
+                                                    key: ScrollOffsetKey.self,
+                                                    value: geo.frame(in: .named("CoverScrollSpace")).minY
+                                                )
+                                        }
+                                        .frame(height: 0)
                                     }
-                                    .frame(height: 0)
 
                                     // Dynamic Top breathing room to ensure any album (even the first) can be centered
                                     Color.clear.frame(height: poppedOutAlbumID != nil ? 380 : 100)
@@ -129,20 +130,7 @@ public struct CoverStackView: View {
                                     // Drawer Albums Stack
                                     LazyVStack(spacing: 0) {
                                         ForEach(albums) { album in
-                                            let isPopped = (poppedOutAlbumID == album.id)
-                                            AlbumSlabView(
-                                                album: album,
-                                                isPoppedOut: isPopped,
-                                                player: player,
-                                                onTogglePopOut: {
-                                                    handleAlbumClick(album: album, proxy: proxy)
-                                                },
-                                                onSelectDetail: {
-                                                    selectedAlbumForDetail = album
-                                                }
-                                            )
-                                            .id(album.id)
-                                            .zIndex(isPopped ? 999 : 0)
+                                            albumSlabRow(for: album, proxy: proxy)
                                         }
                                     }
 
@@ -154,6 +142,7 @@ public struct CoverStackView: View {
                             .coordinateSpace(name: "CoverScrollSpace")
                             // Track scroll offset changes -> Retract when user scrolls manually
                             .onPreferenceChange(ScrollOffsetKey.self) { currentY in
+                                guard poppedOutAlbumID != nil else { return }
                                 if isProgrammaticScroll {
                                     lastScrollY = currentY
                                     return
@@ -215,6 +204,28 @@ public struct CoverStackView: View {
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private func albumSlabRow(for album: Album, proxy: ScrollViewProxy) -> some View {
+        let isPopped = (poppedOutAlbumID == album.id)
+        let isCurrent = (currentlyPlayingAlbum?.id == album.id)
+        AlbumSlabView(
+            album: album,
+            isPoppedOut: isPopped,
+            isCurrentlyPlayingThisAlbum: isCurrent,
+            isPlaying: player.isPlaying,
+            player: player,
+            onTogglePopOut: {
+                handleAlbumClick(album: album, proxy: proxy)
+            },
+            onSelectDetail: {
+                selectedAlbumForDetail = album
+            }
+        )
+        .equatable()
+        .id(album.id)
+        .zIndex(isPopped ? 999 : 0)
     }
 
     private func centerAlbum(_ album: Album, proxy: ScrollViewProxy, animated: Bool = true) {

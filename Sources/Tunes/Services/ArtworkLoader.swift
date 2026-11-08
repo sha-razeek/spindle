@@ -5,7 +5,7 @@ import iTunesLibrary
 import AVFoundation
 import ImageIO
 
-public final class SpineColors: NSObject {
+public final class SpineColors: NSObject, @unchecked Sendable {
     public let bg: Color
     public let text: Color
     public init(bg: Color, text: Color) {
@@ -14,7 +14,7 @@ public final class SpineColors: NSObject {
     }
 }
 
-public final class BackdropPalette: NSObject {
+public final class BackdropPalette: NSObject, @unchecked Sendable {
     public let primary: Color
     public let top: Color
     public let mid: Color
@@ -27,36 +27,43 @@ public final class BackdropPalette: NSObject {
     }
 }
 
-@MainActor
-public final class ArtworkLoader: ObservableObject {
+public final class ArtworkLoader: @unchecked Sendable {
     public static let shared = ArtworkLoader()
-
-    @Published public private(set) var revision: Int = 0
 
     private let cache = NSCache<NSString, NSImage>()
     private let colorCache = NSCache<NSString, SpineColors>()
     private let backdropCache = NSCache<NSString, BackdropPalette>()
     private var itunesLibrary: ITLibrary?
     private var itemsByPID: [UInt64: ITLibMediaItem] = [:]
+    private var inFlightTasks: [String: Task<NSImage?, Never>] = [:]
+    private let lock = NSLock()
 
     public init() {
-        cache.countLimit = 1500
-        colorCache.countLimit = 3000
-        backdropCache.countLimit = 3000
+        cache.countLimit = 2500
+        colorCache.countLimit = 5000
+        backdropCache.countLimit = 5000
+    }
+
+    private func withLock<T>(_ body: () -> T) -> T {
+        lock.lock()
+        defer { lock.unlock() }
+        return body()
     }
 
     public func setLibrary(_ library: ITLibrary?) {
-        self.itunesLibrary = library
-        guard let library = library else {
-            self.itemsByPID = [:]
-            return
+        withLock {
+            self.itunesLibrary = library
+            guard let library = library else {
+                self.itemsByPID = [:]
+                return
+            }
+            var map: [UInt64: ITLibMediaItem] = [:]
+            map.reserveCapacity(library.allMediaItems.count)
+            for item in library.allMediaItems {
+                map[item.persistentID.uint64Value] = item
+            }
+            self.itemsByPID = map
         }
-        var map: [UInt64: ITLibMediaItem] = [:]
-        map.reserveCapacity(library.allMediaItems.count)
-        for item in library.allMediaItems {
-            map[item.persistentID.uint64Value] = item
-        }
-        self.itemsByPID = map
     }
 
     public func cachedImage(for song: Song) -> NSImage? {
@@ -69,46 +76,65 @@ public final class ArtworkLoader: ObservableObject {
             return cached
         }
 
-        // Instant O(1) lookup via PID index
-        if let itItem = itemsByPID[UInt64(song.persistentID)], let art = itItem.artwork {
-            if let data = art.imageData, let img = createThumbnail(from: data, maxPixelSize: 600) {
-                cache.setObject(img, forKey: key)
-                let colors = extractSpineColor(from: img)
-                colorCache.setObject(SpineColors(bg: colors.bg, text: colors.text), forKey: key)
-                let backdrop = extractBackdropPalette(from: img)
-                backdropCache.setObject(backdrop, forKey: key)
-                revision &+= 1
+        let pid = song.persistentID
+        let itItem = withLock { itemsByPID[UInt64(pid)] }
+        let location = song.location
+        let songID = song.id
+
+        // Process image extraction, thumbnail decoding and palette analysis completely in the background
+        let task = withLock { () -> Task<NSImage?, Never> in
+            if let existing = self.inFlightTasks[songID] {
+                return existing
+            }
+            let newTask = Task.detached(priority: .userInitiated) { [weak self, itItem, location, songID] () -> NSImage? in
+                guard let self = self else { return nil }
+
+                var loadedImage: NSImage? = nil
+
+                // 1. Try reading iTunes Library artwork data
+                if let itItem = itItem, let art = itItem.artwork {
+                    if let data = art.imageData, let img = self.createThumbnail(from: data, maxPixelSize: 500) {
+                        loadedImage = img
+                    } else if let img = art.image {
+                        loadedImage = self.downsample(image: img, maxPixelSize: 500)
+                    }
+                }
+
+                // 2. Fallback: extract embedded artwork directly from the audio file using AVAsset
+                if loadedImage == nil, let location = location {
+                    if let img = await self.extractArtworkFromFile(url: location) {
+                        loadedImage = self.downsample(image: img, maxPixelSize: 500)
+                    }
+                }
+
+                guard let img = loadedImage else { return nil }
+
+                let cacheKey = songID as NSString
+                self.cache.setObject(img, forKey: cacheKey)
+
+                // Pre-calculate colors and backdrop palette in background thread
+                let colors = self.extractSpineColor(from: img)
+                self.colorCache.setObject(SpineColors(bg: colors.bg, text: colors.text), forKey: cacheKey)
+
+                let backdrop = self.extractBackdropPalette(from: img)
+                self.backdropCache.setObject(backdrop, forKey: cacheKey)
+
                 return img
-            } else if let img = art.image {
-                let thumb = downsample(image: img, maxPixelSize: 600)
-                cache.setObject(thumb, forKey: key)
-                let colors = extractSpineColor(from: thumb)
-                colorCache.setObject(SpineColors(bg: colors.bg, text: colors.text), forKey: key)
-                let backdrop = extractBackdropPalette(from: thumb)
-                backdropCache.setObject(backdrop, forKey: key)
-                revision &+= 1
-                return thumb
             }
+            self.inFlightTasks[songID] = newTask
+            return newTask
         }
 
-        // Fallback: extract embedded artwork directly from the audio file using AVAsset
-        if let location = song.location {
-            if let img = await extractArtworkFromFile(url: location) {
-                let thumb = downsample(image: img, maxPixelSize: 600)
-                cache.setObject(thumb, forKey: key)
-                let colors = extractSpineColor(from: thumb)
-                colorCache.setObject(SpineColors(bg: colors.bg, text: colors.text), forKey: key)
-                let backdrop = extractBackdropPalette(from: thumb)
-                backdropCache.setObject(backdrop, forKey: key)
-                revision &+= 1
-                return thumb
-            }
+        let result = await task.value
+
+        withLock {
+            _ = self.inFlightTasks.removeValue(forKey: songID)
         }
 
-        return nil
+        return result
     }
 
-    private func createThumbnail(from data: Data, maxPixelSize: CGFloat = 600) -> NSImage? {
+    private func createThumbnail(from data: Data, maxPixelSize: CGFloat = 500) -> NSImage? {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
             return NSImage(data: data)
         }
@@ -123,7 +149,7 @@ public final class ArtworkLoader: ObservableObject {
         return NSImage(cgImage: cgThumb, size: NSSize(width: maxPixelSize, height: maxPixelSize))
     }
 
-    private func downsample(image: NSImage, maxPixelSize: CGFloat = 600) -> NSImage {
+    private func downsample(image: NSImage, maxPixelSize: CGFloat = 500) -> NSImage {
         guard let tiff = image.tiffRepresentation,
               let source = CGImageSourceCreateWithData(tiff as CFData, nil) else {
             return image
