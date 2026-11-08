@@ -33,10 +33,24 @@ public struct AlbumSlabView: View {
     }
 
     public var body: some View {
-        ZStack(alignment: .top) {
-            // MARK: - 3D Slab Visual Assembly
+        ZStack(alignment: .topLeading) {
+            // MARK: - 1. Vinyl Record Disc (Slides out of the sleeve ~1/8th of the way when selected)
+            VinylDiscView(
+                artwork: artworkImage,
+                isPlaying: isCurrentlyPlayingThisAlbum && player.isPlaying,
+                size: 210
+            )
+            // Positioned behind jacket, slides out to the right when popped out
+            .position(
+                x: isPoppedOut ? 425 : 240,
+                y: isPoppedOut ? 140 : 130
+            )
+            .opacity(isPoppedOut ? 1.0 : (isHovered ? 0.35 : 0.0))
+            .animation(.spring(response: 0.42, dampingFraction: 0.72), value: isPoppedOut)
+
+            // MARK: - 2. Front Album Jacket (Drawer Sleeve)
             VStack(spacing: 0) {
-                // MARK: - 1. Front Spine Area (at the TOP of each album!)
+                // Top Spine Edge (Visible in drawer)
                 HStack(spacing: 8) {
                     if isCurrentlyPlayingThisAlbum && player.isPlaying {
                         Image(systemName: "speaker.wave.2.fill")
@@ -45,7 +59,7 @@ public struct AlbumSlabView: View {
                             .padding(.trailing, 2)
                     }
 
-                    // Bold Title
+                    // Bold Album / Song Title
                     Text(album.title)
                         .font(.system(size: 13, weight: .bold))
                         .foregroundColor(spineTextColor)
@@ -72,7 +86,7 @@ public struct AlbumSlabView: View {
                 .frame(width: 480, height: 32)
                 .background(spineBgColor)
                 .overlay(
-                    // Top highlight ridge (light catching edge) and bottom shadow ridge
+                    // Top highlight ridge catching drawer light and bottom shadow ridge
                     VStack {
                         Rectangle()
                             .fill(Color.white.opacity(0.40))
@@ -83,23 +97,15 @@ public struct AlbumSlabView: View {
                             .frame(height: 1)
                     }
                 )
-                .overlay(
-                    // Side 3D thickness hints
-                    HStack {
-                        Rectangle().fill(Color.white.opacity(0.20)).frame(width: 1)
-                        Spacer()
-                        Rectangle().fill(Color.black.opacity(0.35)).frame(width: 1)
-                    }
-                )
                 .shadow(
-                    color: Color.black.opacity(isPoppedOut ? 0.6 : 0.35),
-                    radius: isPoppedOut ? 12 : 5,
+                    color: Color.black.opacity(isPoppedOut ? 0.45 : 0.25),
+                    radius: isPoppedOut ? 10 : 4,
                     x: 0,
-                    y: isPoppedOut ? 6 : 3
+                    y: isPoppedOut ? 5 : 2
                 )
                 .zIndex(10)
 
-                // MARK: - 2. Tilted Album Cover Surface (Extends downward from the spine)
+                // Album Artwork Jacket Surface (Straight, natural perspective)
                 ZStack(alignment: .center) {
                     if let image = artworkImage {
                         Image(nsImage: image)
@@ -112,22 +118,22 @@ public struct AlbumSlabView: View {
                             endPoint: .bottomTrailing
                         )
                         Image(systemName: "music.note")
-                            .font(.system(size: isPoppedOut ? 72 : 56))
+                            .font(.system(size: 56))
                             .foregroundColor(.white.opacity(0.8))
                     }
 
-                    // Studio Lighting Overlay (specular sheen near spine, subtle falloff below)
+                    // Gentle subtle lighting sheen
                     LinearGradient(
                         colors: [
-                            Color.white.opacity(isPoppedOut ? 0.28 : (isHovered ? 0.22 : 0.12)),
+                            Color.white.opacity(isPoppedOut ? 0.20 : 0.10),
                             Color.clear,
-                            Color.black.opacity(isPoppedOut ? 0.15 : 0.35)
+                            Color.black.opacity(isPoppedOut ? 0.10 : 0.25)
                         ],
                         startPoint: .top,
                         endPoint: .bottom
                     )
 
-                    // Controls Overlay when Popped Out or Hovered
+                    // Controls Overlay when Album is Taken Out of the Drawer
                     if isPoppedOut {
                         VStack {
                             Spacer()
@@ -137,10 +143,10 @@ public struct AlbumSlabView: View {
                                 } label: {
                                     ZStack {
                                         Circle()
-                                            .fill(Color.black.opacity(0.65))
-                                            .frame(width: 58, height: 58)
+                                            .fill(Color.black.opacity(0.70))
+                                            .frame(width: 54, height: 54)
                                         Image(systemName: (isCurrentlyPlayingThisAlbum && player.isPlaying) ? "pause.fill" : "play.fill")
-                                            .font(.system(size: 24, weight: .bold))
+                                            .font(.system(size: 22, weight: .bold))
                                             .foregroundColor(.white)
                                             .offset(x: (isCurrentlyPlayingThisAlbum && player.isPlaying) ? 0 : 2)
                                     }
@@ -157,20 +163,20 @@ public struct AlbumSlabView: View {
                                     .font(.system(size: 13, weight: .semibold))
                                     .padding(.horizontal, 14)
                                     .padding(.vertical, 8)
-                                    .background(Color.black.opacity(0.65))
+                                    .background(Color.black.opacity(0.70))
                                     .foregroundColor(.white)
                                     .clipShape(Capsule())
                                 }
                                 .buttonStyle(.plain)
                             }
-                            .padding(.bottom, 24)
+                            .padding(.bottom, 22)
                             .transition(.opacity.combined(with: .scale(scale: 0.9)))
                         }
                     } else if isHovered {
                         ZStack {
                             Circle()
                                 .fill(Color.black.opacity(0.55))
-                                .frame(width: 50, height: 50)
+                                .frame(width: 48, height: 48)
                             Image(systemName: (isCurrentlyPlayingThisAlbum && player.isPlaying) ? "pause.fill" : "play.fill")
                                 .font(.system(size: 20, weight: .bold))
                                 .foregroundColor(.white)
@@ -179,37 +185,31 @@ public struct AlbumSlabView: View {
                         .transition(.scale.combined(with: .opacity))
                     }
                 }
-                .frame(width: 480, height: isPoppedOut ? 320 : 240)
+                .frame(width: 480, height: isPoppedOut ? 280 : 220)
                 .clipped()
                 .overlay(
-                    // Side 3D edge lines
+                    // Clean parallel side sleeve borders
                     HStack {
-                        Rectangle().fill(Color.white.opacity(0.25)).frame(width: 1.5)
+                        Rectangle().fill(Color.white.opacity(0.20)).frame(width: 1)
                         Spacer()
-                        Rectangle().fill(Color.black.opacity(0.35)).frame(width: 1.5)
+                        Rectangle().fill(Color.black.opacity(0.30)).frame(width: 1)
                     }
                 )
-                // 3D Perspective Rotation anchored at the spine connection (.top)
-                .rotation3DEffect(
-                    .degrees(isPoppedOut ? 18 : (isHovered ? 45 : 52)),
-                    axis: (x: 1, y: 0, z: 0),
-                    anchor: .top,
-                    perspective: 0.45
-                )
-                .allowsHitTesting(isPoppedOut)
             }
-            .offset(y: isPoppedOut ? -35 : (isHovered ? -4 : 0))
-            .scaleEffect(isPoppedOut ? 1.08 : 1.0)
+            .frame(width: 480)
+            .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
             .shadow(
-                color: Color.black.opacity(isPoppedOut ? 0.65 : (isHovered ? 0.35 : 0.18)),
-                radius: isPoppedOut ? 32 : (isHovered ? 12 : 5),
+                color: Color.black.opacity(isPoppedOut ? 0.60 : (isHovered ? 0.35 : 0.18)),
+                radius: isPoppedOut ? 28 : (isHovered ? 10 : 4),
                 x: 0,
-                y: isPoppedOut ? 22 : (isHovered ? 6 : 2)
+                y: isPoppedOut ? 16 : (isHovered ? 5 : 2)
             )
         }
-        .frame(width: 520, height: 95)
+        // When clicked, the album slides UP out of the drawer!
+        .offset(y: isPoppedOut ? -110 : (isHovered ? -5 : 0))
+        .frame(width: 520, height: 62)
         .zIndex(isPoppedOut ? 999 : 0)
-        .animation(.spring(response: 0.35, dampingFraction: 0.72), value: isPoppedOut)
+        .animation(.spring(response: 0.38, dampingFraction: 0.72), value: isPoppedOut)
         .animation(.easeInOut(duration: 0.15), value: isHovered)
         .contentShape(Rectangle())
         .onHover { hovering in
@@ -243,7 +243,6 @@ public struct AlbumSlabView: View {
     }
 
     private func loadArtworkAndSpineColor() async {
-        // Initial color from cache or palette
         let initialColors = ArtworkLoader.shared.spineColors(for: album.representativeSong, fallbackID: album.id)
         self.spineBgColor = initialColors.bg
         self.spineTextColor = initialColors.text

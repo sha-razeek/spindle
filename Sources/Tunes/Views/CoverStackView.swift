@@ -27,12 +27,12 @@ public struct CoverStackView: View {
             }
         } else {
             ZStack {
-                // MARK: - Studio Backdrop Gradient
+                // MARK: - Studio Drawer Backdrop Gradient
                 LinearGradient(
                     colors: [
-                        Color(red: 0.20, green: 0.30, blue: 0.36),
-                        Color(red: 0.15, green: 0.22, blue: 0.28),
-                        Color(red: 0.10, green: 0.16, blue: 0.22)
+                        Color(red: 0.18, green: 0.26, blue: 0.32),
+                        Color(red: 0.13, green: 0.19, blue: 0.24),
+                        Color(red: 0.09, green: 0.14, blue: 0.18)
                     ],
                     startPoint: .top,
                     endPoint: .bottom
@@ -49,51 +49,67 @@ public struct CoverStackView: View {
                             .foregroundColor(.white.opacity(0.8))
                     }
                 } else {
-                    ScrollView(.vertical, showsIndicators: false) {
-                        VStack(spacing: 0) {
-                            // Scroll tracker anchor at the top
-                            GeometryReader { geo in
-                                Color.clear
-                                    .preference(
-                                        key: ScrollOffsetKey.self,
-                                        value: geo.frame(in: .named("CoverScrollSpace")).minY
-                                    )
-                            }
-                            .frame(height: 0)
-
-                            // Top breathing room
-                            Color.clear.frame(height: 100)
-
-                            // 3D Cascading Stack
-                            LazyVStack(spacing: 0) {
-                                ForEach(albums) { album in
-                                    let isPopped = (poppedOutAlbumID == album.id)
-                                    AlbumSlabView(
-                                        album: album,
-                                        isPoppedOut: isPopped,
-                                        player: player,
-                                        onTogglePopOut: {
-                                            handleAlbumClick(album: album)
-                                        },
-                                        onSelectDetail: {
-                                            selectedAlbumForDetail = album
-                                        }
-                                    )
-                                    .zIndex(isPopped ? 999 : 0)
-                                }
-                            }
-
-                            // Bottom breathing room
-                            Color.clear.frame(height: 200)
+                    ZStack {
+                        // Subtle Drawer Rail Guides on sides
+                        HStack {
+                            Spacer()
+                            Rectangle()
+                                .fill(Color.white.opacity(0.06))
+                                .frame(width: 2)
+                            Spacer().frame(width: 536)
+                            Rectangle()
+                                .fill(Color.white.opacity(0.06))
+                                .frame(width: 2)
+                            Spacer()
                         }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .coordinateSpace(name: "CoverScrollSpace")
-                    // Track scroll offset changes -> Retract when user scrolls
-                    .onPreferenceChange(ScrollOffsetKey.self) { currentY in
-                        if abs(currentY - lastScrollY) > 2.0 {
-                            retractPoppedOutAlbum()
-                            lastScrollY = currentY
+                        .allowsHitTesting(false)
+
+                        ScrollView(.vertical, showsIndicators: false) {
+                            VStack(spacing: 0) {
+                                // Scroll tracker anchor at the top
+                                GeometryReader { geo in
+                                    Color.clear
+                                        .preference(
+                                            key: ScrollOffsetKey.self,
+                                            value: geo.frame(in: .named("CoverScrollSpace")).minY
+                                        )
+                                }
+                                .frame(height: 0)
+
+                                // Top room for album slide-up
+                                Color.clear.frame(height: 140)
+
+                                // Drawer Albums Stack
+                                LazyVStack(spacing: 0) {
+                                    ForEach(albums) { album in
+                                        let isPopped = (poppedOutAlbumID == album.id)
+                                        AlbumSlabView(
+                                            album: album,
+                                            isPoppedOut: isPopped,
+                                            player: player,
+                                            onTogglePopOut: {
+                                                handleAlbumClick(album: album)
+                                            },
+                                            onSelectDetail: {
+                                                selectedAlbumForDetail = album
+                                            }
+                                        )
+                                        .zIndex(isPopped ? 999 : 0)
+                                    }
+                                }
+
+                                // Bottom breathing room
+                                Color.clear.frame(height: 220)
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                        .coordinateSpace(name: "CoverScrollSpace")
+                        // Track scroll offset changes -> Retract when user scrolls
+                        .onPreferenceChange(ScrollOffsetKey.self) { currentY in
+                            if abs(currentY - lastScrollY) > 2.0 {
+                                retractPoppedOutAlbum()
+                                lastScrollY = currentY
+                            }
                         }
                     }
                 }
@@ -104,7 +120,7 @@ public struct CoverStackView: View {
                         HStack(spacing: 6) {
                             Image(systemName: "square.stack.3d.up.fill")
                                 .font(.system(size: 13))
-                            Text("3D COVER VIEW")
+                            Text("VINYL DRAWER")
                                 .font(.system(size: 11, weight: .bold))
                                 .tracking(1)
                             Text("• \(albums.count) albums")
@@ -136,10 +152,10 @@ public struct CoverStackView: View {
 
     private func handleAlbumClick(album: Album) {
         if poppedOutAlbumID == album.id {
-            // Already popped out: toggle playback
+            // Already taken out: toggle playback
             player.togglePlayPause()
         } else {
-            // Pop out and start playing
+            // Take out of drawer (slide up) and start playing
             withAnimation(.spring(response: 0.38, dampingFraction: 0.72)) {
                 poppedOutAlbumID = album.id
             }
