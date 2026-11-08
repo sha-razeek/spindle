@@ -33,19 +33,21 @@ public struct AlbumSlabView: View {
     }
 
     public var body: some View {
+        let isDiscPoppedOut = isPoppedOut && isCurrentlyPlayingThisAlbum
+
         ZStack(alignment: .topLeading) {
-            // MARK: - 1. Spinning White Vinyl Record (slides out to the right when popped out)
+            // MARK: - 1. Spinning White Vinyl Record (slides out to the right only on play)
             VinylDiscView(
                 artwork: artworkImage,
                 isPlaying: isCurrentlyPlayingThisAlbum && player.isPlaying,
                 size: 440
             )
             .position(
-                x: isPoppedOut ? 410 : 240,
-                y: isPoppedOut ? 246 : 150
+                x: isDiscPoppedOut ? 410 : 240,
+                y: isDiscPoppedOut ? 246 : 150
             )
-            .opacity(isPoppedOut ? 1.0 : (isHovered ? 0.35 : 0.0))
-            .animation(.spring(response: 0.40, dampingFraction: 0.75), value: isPoppedOut)
+            .opacity(isDiscPoppedOut ? 1.0 : 0.0)
+            .animation(.spring(response: 0.40, dampingFraction: 0.75), value: isDiscPoppedOut)
 
             // MARK: - 2. Front Album Jacket
             VStack(spacing: 0) {
