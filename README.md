@@ -2,6 +2,10 @@
 
 A fast, lightweight, and tactile native macOS music player built with SwiftUI. **Spindle** is designed for music lovers who appreciate the physical experience of vinyl and album sleeves while seamlessly interfacing with their local **Apple Music Library** with **zero storage duplication**.
 
+<p align="center">
+  <img src="docs/screenshots/vinyl-drawer.png" alt="Spindle 3D Vinyl Drawer" width="850">
+</p>
+
 ---
 
 ## Direct Apple Music Library Integration
@@ -24,20 +28,34 @@ Spindle connects directly to your existing Apple Music library using macOS's nat
 - **Dynamic Ambient Backdrop**: The entire drawer view background dynamically morphs to reflect the palette of the currently playing album, complete with a luminous atmospheric spotlight aura.
 - **Tactile Spine Navigation**: Click any album to smoothly center it in the viewport with spring physics and automatic viewport alignment.
 
+---
+
 ### Expanded Now Playing & Spectrogram Seeker
+
+<p align="center">
+  <img src="docs/screenshots/now-playing.png" alt="Spindle Expanded Now Playing & Spectrogram Seeker" width="850">
+</p>
+
 - **Waveform Spectrogram Seeker**: Visualizes the track's audio profile via high-resolution RMS audio analysis, revealing a smooth Catmull-Rom spline curve that doubles as an interactive scrubbing seeker.
 - **Dynamic Living Motion Gradients**: Ambient fluid lighting that shifts subtly with the music.
 - **Minimal, Typography-First Details**: Left-aligned tracklist and metadata without clutter or monospace typefaces.
 
-### macOS System Integration
-- **Media Keys & Control Center**: Full integration with `MPRemoteCommandCenter` (Play/Pause, Next, Previous, Scrubbing) and Touch Bar/keyboard media keys (F7, F8, F9).
-- **Now Playing Info Center**: Publishes active song title, artist, album, duration, elapsed playback time, and artwork to macOS Control Center and lock screen.
+---
+
+### Library Browsing & System Integration
+
+<p align="center">
+  <img src="docs/screenshots/albums-grid.png" alt="Spindle Albums Grid View" width="850">
+</p>
+
 - **Library Views**:
+  - **3D Covers**: Interactive physical vinyl drawer browser.
+  - **Albums**: Responsive cover grid with instant album detail inspection.
   - **Songs**: Searchable, sortable list view with real-time filtering.
-  - **Albums**: Responsive grid view with instant album detail inspection.
-  - **3D Covers**: Physical vinyl drawer browser.
   - **Artists**: Two-pane discography navigator.
   - **Playlists**: Preserves custom playlist order directly from Apple Music.
+- **Media Keys & Control Center**: Full integration with `MPRemoteCommandCenter` (Play/Pause, Next, Previous, Scrubbing) and Touch Bar/keyboard media keys (F7, F8, F9).
+- **Now Playing Info Center**: Publishes active song title, artist, album, duration, elapsed playback time, and artwork to macOS Control Center and lock screen.
 - **Reveal in Finder**: Quickly jump straight to the source audio file in Finder.
 
 ---
@@ -67,7 +85,7 @@ Compile the release binary, generate the high-resolution turntable app icon, and
 ./scripts/build_app.sh
 ```
 
-The output will be placed at `build/Spindle.app` (or `build/Tunes.app`). You can drag it to `/Applications` or open it directly:
+The output will be placed at `build/Tunes.app`. You can drag it to `/Applications` or open it directly:
 
 ```bash
 open build/Tunes.app
@@ -87,6 +105,11 @@ swift build -c release
 ```
 spindle/
 ├── Package.swift                  # Swift Package Manager manifest
+├── docs/
+│   └── screenshots/               # App showcase screenshots
+│       ├── vinyl-drawer.png
+│       ├── now-playing.png
+│       └── albums-grid.png
 ├── Sources/
 │   └── Tunes/
 │       ├── App.swift              # App lifecycle & global keyboard commands
