@@ -35,6 +35,9 @@ public struct CoverStackView: View {
     @State private var lastScrolledAlbumID: String? = nil
     @State private var scrubTask: Task<Void, Never>? = nil
 
+    // Now Playing Header Button State
+    @State private var isHoveringNowPlaying: Bool = false
+
     private var currentBackdrop: BackdropPalette {
         if let song = player.currentSong {
             return ArtworkLoader.shared.backdropPalette(for: song, fallbackID: song.id)
@@ -210,7 +213,7 @@ public struct CoverStackView: View {
 
                             // MARK: - 4. Floating Header
                             VStack {
-                                HStack {
+                                HStack(spacing: 10) {
                                     HStack(spacing: 6) {
                                         Image(systemName: "square.stack.3d.up.fill")
                                             .font(.system(size: 13))
@@ -233,6 +236,50 @@ public struct CoverStackView: View {
                                     )
                                     .foregroundColor(.white)
 
+                                    // Quick "Now Playing" jump button
+                                    if let playingAlbum = currentlyPlayingAlbum {
+                                        let isFocused = (poppedOutAlbumID == playingAlbum.id)
+                                        Button {
+                                            scrollToPlayingAlbum(proxy: proxy, force: true)
+                                        } label: {
+                                            HStack(spacing: 6) {
+                                                Image(systemName: player.isPlaying ? "speaker.wave.2.fill" : "play.fill")
+                                                    .font(.system(size: 10, weight: .bold))
+                                                    .foregroundColor(isFocused ? .white : Color.accentColor)
+
+                                                Text("NOW PLAYING")
+                                                    .font(.system(size: 10.5, weight: .bold))
+                                                    .tracking(0.6)
+
+                                                Text("• \(playingAlbum.title)")
+                                                    .font(.system(size: 11, weight: .medium))
+                                                    .foregroundColor(.white.opacity(0.85))
+                                                    .lineLimit(1)
+                                            }
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 6)
+                                            .background(
+                                                Capsule()
+                                                    .fill(isHoveringNowPlaying ? Color.white.opacity(0.20) : Color.clear)
+                                                    .background(Capsule().fill(.ultraThinMaterial))
+                                                    .overlay(
+                                                        Capsule()
+                                                            .stroke(isFocused ? Color.white.opacity(0.40) : Color.white.opacity(0.18), lineWidth: 1)
+                                                    )
+                                            )
+                                            .foregroundColor(.white)
+                                            .shadow(color: Color.black.opacity(0.25), radius: 6, x: 0, y: 2)
+                                        }
+                                        .buttonStyle(.plain)
+                                        .onHover { h in
+                                            withAnimation(.easeInOut(duration: 0.15)) {
+                                                isHoveringNowPlaying = h
+                                            }
+                                        }
+                                        .help("Jump back to now playing album: \(playingAlbum.title)")
+                                        .transition(.opacity.combined(with: .scale(scale: 0.94)))
+                                    }
+
                                     Spacer()
                                 }
                                 .padding(.leading, 24)
@@ -240,6 +287,7 @@ public struct CoverStackView: View {
 
                                 Spacer()
                             }
+                            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: currentlyPlayingAlbum?.id)
 
                             // MARK: - 5. Center HUD Flash on Alphabet Jump
                             if showLetterHUD, let letter = hudLetter {
@@ -557,6 +605,12 @@ public struct CoverStackView: View {
     private func centerAlbum(_ album: Album, proxy: ScrollViewProxy, animated: Bool = true) {
         isProgrammaticScroll = true
         programmaticScrollTask?.cancel()
+
+        // Sync active letter & scrubber fraction to centered album
+        activeLetter = initialLetter(for: album.title)
+        if let idx = albums.firstIndex(where: { $0.id == album.id }), albums.count > 1 {
+            scrubFraction = CGFloat(idx) / CGFloat(albums.count - 1)
+        }
 
         withAnimation(animated ? .spring(response: 0.42, dampingFraction: 0.80) : nil) {
             poppedOutAlbumID = album.id
