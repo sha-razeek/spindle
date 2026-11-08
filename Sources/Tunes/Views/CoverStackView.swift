@@ -50,20 +50,6 @@ public struct CoverStackView: View {
                     }
                 } else {
                     ZStack {
-                        // Subtle Drawer Rail Guides on sides
-                        HStack {
-                            Spacer()
-                            Rectangle()
-                                .fill(Color.white.opacity(0.06))
-                                .frame(width: 2)
-                            Spacer().frame(width: 536)
-                            Rectangle()
-                                .fill(Color.white.opacity(0.06))
-                                .frame(width: 2)
-                            Spacer()
-                        }
-                        .allowsHitTesting(false)
-
                         ScrollView(.vertical, showsIndicators: false) {
                             VStack(spacing: 0) {
                                 // Scroll tracker anchor at the top

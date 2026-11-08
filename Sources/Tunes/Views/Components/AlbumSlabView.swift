@@ -38,11 +38,11 @@ public struct AlbumSlabView: View {
             VinylDiscView(
                 artwork: artworkImage,
                 isPlaying: isCurrentlyPlayingThisAlbum && player.isPlaying,
-                size: 210
+                size: 290
             )
             .position(
-                x: isPoppedOut ? 425 : 240,
-                y: isPoppedOut ? 160 : 130
+                x: isPoppedOut ? 435 : 240,
+                y: isPoppedOut ? 222 : 140
             )
             .opacity(isPoppedOut ? 1.0 : (isHovered ? 0.35 : 0.0))
             .animation(.spring(response: 0.40, dampingFraction: 0.75), value: isPoppedOut)
@@ -85,14 +85,14 @@ public struct AlbumSlabView: View {
                 .frame(width: 480, height: 32)
                 .background(spineBgColor)
                 .overlay(
-                    // Top highlight ridge catching drawer lighting
-                    VStack {
+                    // 3D tactile bevel edges
+                    VStack(spacing: 0) {
                         Rectangle()
-                            .fill(Color.white.opacity(0.40))
-                            .frame(height: 1)
+                            .fill(Color.white.opacity(0.55))
+                            .frame(height: 1.5)
                         Spacer()
                         Rectangle()
-                            .fill(Color.black.opacity(0.28))
+                            .fill(Color.black.opacity(0.35))
                             .frame(height: 1)
                     }
                 )
@@ -124,9 +124,9 @@ public struct AlbumSlabView: View {
                     // Gentle lighting sheen
                     LinearGradient(
                         colors: [
-                            Color.white.opacity(isPoppedOut ? 0.20 : 0.10),
+                            Color.white.opacity(isPoppedOut ? 0.20 : 0.08),
                             Color.clear,
-                            Color.black.opacity(isPoppedOut ? 0.10 : 0.25)
+                            Color.black.opacity(isPoppedOut ? 0.10 : 0.35)
                         ],
                         startPoint: .top,
                         endPoint: .bottom
@@ -184,7 +184,7 @@ public struct AlbumSlabView: View {
                         .transition(.scale.combined(with: .opacity))
                     }
                 }
-                .frame(width: 480, height: isPoppedOut ? 260 : 220)
+                .frame(width: 480, height: isPoppedOut ? 380 : 240)
                 .clipped()
                 .overlay(
                     // Clean sleeve side borders
@@ -197,16 +197,22 @@ public struct AlbumSlabView: View {
             }
             .frame(width: 480)
             .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+            .rotation3DEffect(
+                .degrees(isPoppedOut ? 0 : -13),
+                axis: (x: 1, y: 0, z: 0),
+                anchor: .top,
+                perspective: 0.2
+            )
             .shadow(
-                color: Color.black.opacity(isPoppedOut ? 0.60 : (isHovered ? 0.35 : 0.18)),
-                radius: isPoppedOut ? 28 : (isHovered ? 10 : 4),
+                color: Color.black.opacity(isPoppedOut ? 0.65 : (isHovered ? 0.38 : 0.22)),
+                radius: isPoppedOut ? 32 : (isHovered ? 12 : 5),
                 x: 0,
-                y: isPoppedOut ? 16 : (isHovered ? 5 : 2)
+                y: isPoppedOut ? 18 : (isHovered ? 6 : 3)
             )
         }
         // Expand the row slot when popped out so the albums below move down cleanly!
-        .frame(width: 550, height: isPoppedOut ? 300 : 56, alignment: .top)
-        .offset(y: (isHovered && !isPoppedOut) ? -3 : 0)
+        .frame(width: 590, height: isPoppedOut ? 420 : 80, alignment: .top)
+        .offset(y: (isHovered && !isPoppedOut) ? -4 : 0)
         .zIndex(isPoppedOut ? 999 : 0)
         .animation(.spring(response: 0.38, dampingFraction: 0.75), value: isPoppedOut)
         .animation(.easeInOut(duration: 0.15), value: isHovered)
