@@ -2,17 +2,17 @@
 import PackageDescription
 
 let package = Package(
-    name: "Tunes",
+    name: "Spindle",
     platforms: [
         .macOS(.v14)
     ],
     products: [
-        .executable(name: "Tunes", targets: ["Tunes"])
+        .executable(name: "Spindle", targets: ["Spindle"])
     ],
     targets: [
         .executableTarget(
-            name: "Tunes",
-            path: "Sources/Tunes",
+            name: "Spindle",
+            path: "Sources/Spindle",
             swiftSettings: [
                 .unsafeFlags([
                     "-plugin-path", "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/swift/host/plugins"

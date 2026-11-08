@@ -4,10 +4,10 @@ set -e
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$DIR"
 
-echo "==> Building Tunes (Release configuration)..."
+echo "==> Building Spindle (Release configuration)..."
 swift build -c release
 
-APP_DIR="build/Tunes.app"
+APP_DIR="build/Spindle.app"
 CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
@@ -18,8 +18,8 @@ mkdir -p "$MACOS_DIR"
 mkdir -p "$RESOURCES_DIR"
 
 # Copy binary
-cp ".build/release/Tunes" "$MACOS_DIR/Tunes"
-chmod +x "$MACOS_DIR/Tunes"
+cp ".build/release/Spindle" "$MACOS_DIR/Spindle"
+chmod +x "$MACOS_DIR/Spindle"
 
 # Copy Info.plist
 cp "Resources/Info.plist" "$CONTENTS_DIR/Info.plist"
@@ -34,7 +34,7 @@ echo "==> Code signing application bundle..."
 codesign --force --deep -s - "$APP_DIR"
 
 echo "==========================================="
-echo " Successfully built Tunes.app!"
+echo " Successfully built Spindle.app!"
 echo " Location: $DIR/$APP_DIR"
 echo " You can launch it with:"
 echo "   open $DIR/$APP_DIR"

@@ -180,6 +180,7 @@ public struct ContentView: View {
                 }
             }
         }
+        .navigationTitle("Spindle")
         .frame(minWidth: 900, minHeight: 600)
     }
 }

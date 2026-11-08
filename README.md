@@ -85,10 +85,10 @@ Compile the release binary, generate the high-resolution turntable app icon, and
 ./scripts/build_app.sh
 ```
 
-The output will be placed at `build/Tunes.app`. You can drag it to `/Applications` or open it directly:
+The output will be placed at `build/Spindle.app`. You can drag it to `/Applications` or open it directly:
 
 ```bash
-open build/Tunes.app
+open build/Spindle.app
 ```
 
 ### Swift Package Manager
@@ -111,7 +111,7 @@ spindle/
 │       ├── now-playing.png
 │       └── albums-grid.png
 ├── Sources/
-│   └── Tunes/
+│   └── Spindle/
 │       ├── App.swift              # App lifecycle & global keyboard commands
 │       ├── Models/
 │       │   ├── Song.swift         # Song model wrapping ITLibMediaItem

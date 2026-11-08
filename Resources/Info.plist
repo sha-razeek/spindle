@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>Tunes</string>
+    <string>Spindle</string>
     <key>CFBundleIdentifier</key>
-    <string>com.sha.Tunes</string>
+    <string>com.sha.Spindle</string>
     <key>CFBundleName</key>
-    <string>Tunes</string>
+    <string>Spindle</string>
     <key>CFBundleDisplayName</key>
-    <string>Tunes</string>
+    <string>Spindle</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>CFBundlePackageType</key>
@@ -27,6 +27,6 @@
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSAppleMusicUsageDescription</key>
-    <string>Tunes uses your Apple Music library to load songs and album artwork directly without duplicating your files.</string>
+    <string>Spindle uses your Apple Music library to load songs and album artwork directly without duplicating your files.</string>
 </dict>
 </plist>
