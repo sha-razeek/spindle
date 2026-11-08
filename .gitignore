@@ -1,0 +1,15 @@
+# Swift Package Manager & Build outputs
+.build/
+build/
+DerivedData/
+*.xcuserstate
+*.xcuserdatad
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor / Temp
+*.swp
+*~
