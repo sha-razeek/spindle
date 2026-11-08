@@ -117,7 +117,7 @@ public struct ArtistsView: View {
                                             let isPlayingThis = (player.currentSong?.id == song.id)
                                             HStack(spacing: 10) {
                                                 Text("\(song.trackNumber > 0 ? "\(song.trackNumber)" : "-")")
-                                                    .font(.system(size: 11, design: .monospaced))
+                                                    .font(.system(size: 11))
                                                     .foregroundColor(.secondary)
                                                     .frame(width: 24, alignment: .trailing)
 
@@ -129,7 +129,7 @@ public struct ArtistsView: View {
                                                 Spacer()
 
                                                 Text(song.formattedDuration)
-                                                    .font(.system(size: 11, design: .monospaced))
+                                                    .font(.system(size: 11))
                                                     .foregroundColor(.secondary)
                                             }
                                             .padding(.vertical, 4)

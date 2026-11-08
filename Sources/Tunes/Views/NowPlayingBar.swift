@@ -161,7 +161,7 @@ public struct NowPlayingBar: View {
                 // Scrubber Row
                 HStack(spacing: 8) {
                     Text(isDraggingScrubber ? formatSeconds(scrubTime) : player.formattedCurrentTime)
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(.system(size: 10))
                         .foregroundColor(.secondary)
                         .frame(width: 36, alignment: .trailing)
 
@@ -186,7 +186,7 @@ public struct NowPlayingBar: View {
                     .frame(maxWidth: 380)
 
                     Text(player.formattedRemainingTime)
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(.system(size: 10))
                         .foregroundColor(.secondary)
                         .frame(width: 42, alignment: .leading)
                 }

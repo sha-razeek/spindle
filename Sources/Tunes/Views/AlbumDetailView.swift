@@ -123,7 +123,7 @@ public struct AlbumDetailView: View {
                                         .foregroundColor(.accentColor)
                                 } else {
                                     Text("\(song.trackNumber > 0 ? "\(song.trackNumber)" : "-")")
-                                        .font(.system(size: 12, design: .monospaced))
+                                        .font(.system(size: 12))
                                         .foregroundColor(.secondary)
                                 }
                             }
@@ -137,7 +137,7 @@ public struct AlbumDetailView: View {
                             Spacer()
 
                             Text(song.formattedDuration)
-                                .font(.system(size: 12, design: .monospaced))
+                                .font(.system(size: 12))
                                 .foregroundColor(.secondary)
                         }
                         .padding(.horizontal, 12)

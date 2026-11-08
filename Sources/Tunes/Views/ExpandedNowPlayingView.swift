@@ -191,11 +191,11 @@ public struct ExpandedNowPlayingView: View {
 
                                     HStack {
                                         Text(isDraggingScrubber ? formatSeconds(scrubTime) : player.formattedCurrentTime)
-                                            .font(.system(size: 11, design: .monospaced))
+                                            .font(.system(size: 11))
                                             .foregroundColor(.white.opacity(0.65))
                                         Spacer()
                                         Text(player.formattedRemainingTime)
-                                            .font(.system(size: 11, design: .monospaced))
+                                            .font(.system(size: 11))
                                             .foregroundColor(.white.opacity(0.65))
                                     }
                                 }
@@ -271,7 +271,7 @@ public struct ExpandedNowPlayingView: View {
                                                                 .foregroundColor(.white)
                                                         } else {
                                                             Text("\(albumSong.trackNumber > 0 ? "\(albumSong.trackNumber)" : "-")")
-                                                                .font(.system(size: 11, design: .monospaced))
+                                                                .font(.system(size: 11))
                                                                 .foregroundColor(.white.opacity(0.45))
                                                         }
                                                     }
@@ -285,7 +285,7 @@ public struct ExpandedNowPlayingView: View {
                                                     Spacer()
 
                                                     Text(albumSong.formattedDuration)
-                                                        .font(.system(size: 11, design: .monospaced))
+                                                        .font(.system(size: 11))
                                                         .foregroundColor(.white.opacity(0.45))
                                                 }
                                                 .padding(.horizontal, 8)

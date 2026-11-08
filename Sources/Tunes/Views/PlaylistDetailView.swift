@@ -99,7 +99,7 @@ public struct PlaylistDetailView: View {
                                         .foregroundColor(.accentColor)
                                 } else {
                                     Text("\(index + 1)")
-                                        .font(.system(size: 12, design: .monospaced))
+                                        .font(.system(size: 12))
                                         .foregroundColor(.secondary)
                                 }
                             }
@@ -126,7 +126,7 @@ public struct PlaylistDetailView: View {
                                 .lineLimit(1)
 
                             Text(song.formattedDuration)
-                                .font(.system(size: 12, design: .monospaced))
+                                .font(.system(size: 12))
                                 .foregroundColor(.secondary)
                                 .frame(width: 50, alignment: .trailing)
                         }
