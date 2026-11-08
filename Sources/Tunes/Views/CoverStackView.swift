@@ -1,10 +1,19 @@
 import SwiftUI
 
+private struct ScrollOffsetKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
 public struct CoverStackView: View {
     let albums: [Album]
     @ObservedObject var player: AudioPlayer
 
-    @State private var selectedAlbum: Album?
+    @State private var selectedAlbumForDetail: Album?
+    @State private var poppedOutAlbumID: String? = nil
+    @State private var lastScrollY: CGFloat = 0
 
     public init(albums: [Album], player: AudioPlayer) {
         self.albums = albums
@@ -12,18 +21,18 @@ public struct CoverStackView: View {
     }
 
     public var body: some View {
-        if let album = selectedAlbum {
+        if let album = selectedAlbumForDetail {
             AlbumDetailView(album: album, player: player) {
-                selectedAlbum = nil
+                selectedAlbumForDetail = nil
             }
         } else {
             ZStack {
                 // MARK: - Studio Backdrop Gradient
                 LinearGradient(
                     colors: [
-                        Color(red: 0.22, green: 0.32, blue: 0.38),
-                        Color(red: 0.16, green: 0.24, blue: 0.30),
-                        Color(red: 0.12, green: 0.18, blue: 0.24)
+                        Color(red: 0.20, green: 0.30, blue: 0.36),
+                        Color(red: 0.15, green: 0.22, blue: 0.28),
+                        Color(red: 0.10, green: 0.16, blue: 0.22)
                     ],
                     startPoint: .top,
                     endPoint: .bottom
@@ -42,22 +51,50 @@ public struct CoverStackView: View {
                 } else {
                     ScrollView(.vertical, showsIndicators: false) {
                         VStack(spacing: 0) {
-                            // Top breathing room
-                            Color.clear.frame(height: 120)
+                            // Scroll tracker anchor at the top
+                            GeometryReader { geo in
+                                Color.clear
+                                    .preference(
+                                        key: ScrollOffsetKey.self,
+                                        value: geo.frame(in: .named("CoverScrollSpace")).minY
+                                    )
+                            }
+                            .frame(height: 0)
 
-                            // 3D Cascading Stack with standard 0 spacing and fixed row heights
+                            // Top breathing room
+                            Color.clear.frame(height: 100)
+
+                            // 3D Cascading Stack
                             LazyVStack(spacing: 0) {
                                 ForEach(albums) { album in
-                                    AlbumSlabView(album: album, player: player) {
-                                        selectedAlbum = album
-                                    }
+                                    let isPopped = (poppedOutAlbumID == album.id)
+                                    AlbumSlabView(
+                                        album: album,
+                                        isPoppedOut: isPopped,
+                                        player: player,
+                                        onTogglePopOut: {
+                                            handleAlbumClick(album: album)
+                                        },
+                                        onSelectDetail: {
+                                            selectedAlbumForDetail = album
+                                        }
+                                    )
+                                    .zIndex(isPopped ? 999 : 0)
                                 }
                             }
 
                             // Bottom breathing room
-                            Color.clear.frame(height: 180)
+                            Color.clear.frame(height: 200)
                         }
                         .frame(maxWidth: .infinity)
+                    }
+                    .coordinateSpace(name: "CoverScrollSpace")
+                    // Track scroll offset changes -> Retract when user scrolls
+                    .onPreferenceChange(ScrollOffsetKey.self) { currentY in
+                        if abs(currentY - lastScrollY) > 2.0 {
+                            retractPoppedOutAlbum()
+                            lastScrollY = currentY
+                        }
                     }
                 }
 
@@ -94,6 +131,28 @@ public struct CoverStackView: View {
                     Spacer()
                 }
             }
+        }
+    }
+
+    private func handleAlbumClick(album: Album) {
+        if poppedOutAlbumID == album.id {
+            // Already popped out: toggle playback
+            player.togglePlayPause()
+        } else {
+            // Pop out and start playing
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.72)) {
+                poppedOutAlbumID = album.id
+            }
+            if let first = album.songs.first {
+                player.play(song: first, inContext: album.songs)
+            }
+        }
+    }
+
+    private func retractPoppedOutAlbum() {
+        guard poppedOutAlbumID != nil else { return }
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
+            poppedOutAlbumID = nil
         }
     }
 }
