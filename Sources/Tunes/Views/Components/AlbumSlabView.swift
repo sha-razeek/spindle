@@ -4,6 +4,7 @@ import AppKit
 public struct AlbumSlabView: View {
     let album: Album
     let isPoppedOut: Bool
+    let isOtherAlbumPoppedOut: Bool
     @ObservedObject var player: AudioPlayer
     var onTogglePopOut: () -> Void
     var onSelectDetail: () -> Void
@@ -21,12 +22,14 @@ public struct AlbumSlabView: View {
     public init(
         album: Album,
         isPoppedOut: Bool,
+        isOtherAlbumPoppedOut: Bool = false,
         player: AudioPlayer,
         onTogglePopOut: @escaping () -> Void,
         onSelectDetail: @escaping () -> Void
     ) {
         self.album = album
         self.isPoppedOut = isPoppedOut
+        self.isOtherAlbumPoppedOut = isOtherAlbumPoppedOut
         self.player = player
         self.onTogglePopOut = onTogglePopOut
         self.onSelectDetail = onSelectDetail
@@ -220,17 +223,26 @@ public struct AlbumSlabView: View {
                 perspective: 0.35
             )
             .shadow(
-                color: Color.black.opacity(isPoppedOut ? 0.65 : (isHovered ? 0.38 : 0.22)),
-                radius: isPoppedOut ? 32 : (isHovered ? 12 : 5),
+                color: Color.black.opacity(isPoppedOut ? 0.65 : (isOtherAlbumPoppedOut ? 0.15 : (isHovered ? 0.38 : 0.22))),
+                radius: isPoppedOut ? 32 : (isOtherAlbumPoppedOut ? 3 : (isHovered ? 12 : 5)),
                 x: 0,
                 y: isPoppedOut ? 18 : (isHovered ? 6 : 3)
             )
         }
+        // Center the combined Jacket + White LP Disc unit horizontally
+        .offset(x: isDiscPoppedOut ? -62 : 0)
+        .animation(.spring(response: 0.40, dampingFraction: 0.75), value: isDiscPoppedOut)
+        // Elegant separation margin above & below the selected album to part the stack
+        .padding(.vertical, isPoppedOut ? 22 : 0)
         // Expand the row slot when popped out so the whole cover, white vinyl disc, and controls are visible!
-        .frame(width: 780, height: isPoppedOut ? 570 : 96, alignment: .top)
+        .frame(width: 780, height: isPoppedOut ? 614 : 96, alignment: .top)
         .offset(y: (isHovered && !isPoppedOut) ? -4 : 0)
+        // Non-selected albums gently recede and dim to highlight the centered selection
+        .opacity(isOtherAlbumPoppedOut ? 0.65 : 1.0)
+        .scaleEffect(isOtherAlbumPoppedOut ? 0.96 : 1.0)
         .zIndex(isPoppedOut ? 999 : 0)
-        .animation(.spring(response: 0.38, dampingFraction: 0.75), value: isPoppedOut)
+        .animation(.spring(response: 0.42, dampingFraction: 0.80), value: isPoppedOut)
+        .animation(.spring(response: 0.35, dampingFraction: 0.82), value: isOtherAlbumPoppedOut)
         .animation(.easeInOut(duration: 0.15), value: isHovered)
         .contentShape(Rectangle())
         .onHover { hovering in

@@ -14,6 +14,8 @@ public struct CoverStackView: View {
     @State private var selectedAlbumForDetail: Album?
     @State private var poppedOutAlbumID: String? = nil
     @State private var lastScrollY: CGFloat = 0
+    @State private var isProgrammaticScroll: Bool = false
+    @State private var programmaticScrollTask: Task<Void, Never>? = nil
 
     public init(albums: [Album], player: AudioPlayer) {
         self.albums = albums
@@ -38,6 +40,10 @@ public struct CoverStackView: View {
                     endPoint: .bottom
                 )
                 .ignoresSafeArea()
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    retractPoppedOutAlbum()
+                }
 
                 if albums.isEmpty {
                     VStack(spacing: 12) {
@@ -50,64 +56,73 @@ public struct CoverStackView: View {
                     }
                 } else {
                     ZStack {
-                        ScrollView(.vertical, showsIndicators: false) {
-                            VStack(spacing: 0) {
-                                // Scroll tracker anchor at the top
-                                GeometryReader { geo in
-                                    Color.clear
-                                        .preference(
-                                            key: ScrollOffsetKey.self,
-                                            value: geo.frame(in: .named("CoverScrollSpace")).minY
-                                        )
-                                }
-                                .frame(height: 0)
-
-                                // Top breathing room
-                                Color.clear.frame(height: 100)
-
-                                // Drawer Albums Stack
-                                LazyVStack(spacing: 0) {
-                                    ForEach(albums) { album in
-                                        let isPopped = (poppedOutAlbumID == album.id)
-                                        AlbumSlabView(
-                                            album: album,
-                                            isPoppedOut: isPopped,
-                                            player: player,
-                                            onTogglePopOut: {
-                                                handleAlbumClick(album: album)
-                                            },
-                                            onSelectDetail: {
-                                                selectedAlbumForDetail = album
-                                            }
-                                        )
-                                        .zIndex(isPopped ? 999 : 0)
+                        ScrollViewReader { proxy in
+                            ScrollView(.vertical, showsIndicators: false) {
+                                VStack(spacing: 0) {
+                                    // Scroll tracker anchor at the top
+                                    GeometryReader { geo in
+                                        Color.clear
+                                            .preference(
+                                                key: ScrollOffsetKey.self,
+                                                value: geo.frame(in: .named("CoverScrollSpace")).minY
+                                            )
                                     }
-                                }
+                                    .frame(height: 0)
 
-                                // Bottom breathing room
-                                Color.clear.frame(height: 180)
+                                    // Dynamic Top breathing room to ensure any album (even the first) can be centered
+                                    Color.clear.frame(height: poppedOutAlbumID != nil ? 380 : 100)
+
+                                    // Drawer Albums Stack
+                                    LazyVStack(spacing: 0) {
+                                        ForEach(albums) { album in
+                                            let isPopped = (poppedOutAlbumID == album.id)
+                                            let isOtherPopped = (poppedOutAlbumID != nil && !isPopped)
+                                            AlbumSlabView(
+                                                album: album,
+                                                isPoppedOut: isPopped,
+                                                isOtherAlbumPoppedOut: isOtherPopped,
+                                                player: player,
+                                                onTogglePopOut: {
+                                                    handleAlbumClick(album: album, proxy: proxy)
+                                                },
+                                                onSelectDetail: {
+                                                    selectedAlbumForDetail = album
+                                                }
+                                            )
+                                            .id(album.id)
+                                            .zIndex(isPopped ? 999 : 0)
+                                        }
+                                    }
+
+                                    // Dynamic Bottom breathing room to ensure any album (even the last) can be centered
+                                    Color.clear.frame(height: poppedOutAlbumID != nil ? 440 : 180)
+                                }
+                                .frame(maxWidth: .infinity)
                             }
-                            .frame(maxWidth: .infinity)
-                        }
-                        .coordinateSpace(name: "CoverScrollSpace")
-                        // Gradient Alpha Mask: Eliminates sudden appearance at bottom/top
-                        .mask(
-                            LinearGradient(
-                                stops: [
-                                    .init(color: .clear, location: 0.0),
-                                    .init(color: .black, location: 0.06),
-                                    .init(color: .black, location: 0.88),
-                                    .init(color: .clear, location: 0.98)
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
+                            .coordinateSpace(name: "CoverScrollSpace")
+                            // Gradient Alpha Mask: Eliminates sudden appearance at bottom/top
+                            .mask(
+                                LinearGradient(
+                                    stops: [
+                                        .init(color: .clear, location: 0.0),
+                                        .init(color: .black, location: 0.06),
+                                        .init(color: .black, location: 0.88),
+                                        .init(color: .clear, location: 0.98)
+                                    ],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
                             )
-                        )
-                        // Track scroll offset changes -> Retract when user scrolls
-                        .onPreferenceChange(ScrollOffsetKey.self) { currentY in
-                            if abs(currentY - lastScrollY) > 2.0 {
-                                retractPoppedOutAlbum()
-                                lastScrollY = currentY
+                            // Track scroll offset changes -> Retract when user scrolls manually
+                            .onPreferenceChange(ScrollOffsetKey.self) { currentY in
+                                if isProgrammaticScroll {
+                                    lastScrollY = currentY
+                                    return
+                                }
+                                if abs(currentY - lastScrollY) > 3.0 {
+                                    retractPoppedOutAlbum()
+                                    lastScrollY = currentY
+                                }
                             }
                         }
 
@@ -165,16 +180,32 @@ public struct CoverStackView: View {
         }
     }
 
-    private func handleAlbumClick(album: Album) {
+    private func handleAlbumClick(album: Album, proxy: ScrollViewProxy) {
         let isAlreadyPlayingThisAlbum = player.currentSong != nil && album.songs.contains(where: { $0.id == player.currentSong?.id })
 
         if poppedOutAlbumID == album.id {
             // Already popped out: toggle playback
             player.togglePlayPause()
         } else {
-            // Highlight / expand this album and smoothly move all albums below it down!
-            withAnimation(.spring(response: 0.38, dampingFraction: 0.75)) {
+            // Flag programmatic scroll to prevent auto-retraction during centering
+            isProgrammaticScroll = true
+            programmaticScrollTask?.cancel()
+
+            // Highlight, expand and center this album smoothly
+            withAnimation(.spring(response: 0.42, dampingFraction: 0.80)) {
                 poppedOutAlbumID = album.id
+                proxy.scrollTo(album.id, anchor: .center)
+            }
+
+            programmaticScrollTask = Task { @MainActor in
+                // Secondary alignment tick once dynamic row height updates in layout tree
+                try? await Task.sleep(nanoseconds: 60_000_000)
+                withAnimation(.spring(response: 0.42, dampingFraction: 0.80)) {
+                    proxy.scrollTo(album.id, anchor: .center)
+                }
+                // Retain guard until spring settling completes
+                try? await Task.sleep(nanoseconds: 480_000_000)
+                isProgrammaticScroll = false
             }
 
             if isAlreadyPlayingThisAlbum {
@@ -193,6 +224,8 @@ public struct CoverStackView: View {
 
     private func retractPoppedOutAlbum() {
         guard poppedOutAlbumID != nil else { return }
+        programmaticScrollTask?.cancel()
+        isProgrammaticScroll = false
         withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
             poppedOutAlbumID = nil
         }
