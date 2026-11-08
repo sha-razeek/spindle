@@ -10,6 +10,7 @@ private struct ScrollOffsetKey: PreferenceKey {
 public struct CoverStackView: View {
     let albums: [Album]
     @ObservedObject var player: AudioPlayer
+    @ObservedObject private var artworkLoader = ArtworkLoader.shared
 
     @State private var selectedAlbumForDetail: Album?
     @State private var poppedOutAlbumID: String? = nil
@@ -17,10 +18,12 @@ public struct CoverStackView: View {
     @State private var isProgrammaticScroll: Bool = false
     @State private var programmaticScrollTask: Task<Void, Never>? = nil
 
-    // Dynamic Backdrop Colors derived from currently playing album
-    @State private var backdropTop: Color = Color(red: 0.18, green: 0.26, blue: 0.32)
-    @State private var backdropMid: Color = Color(red: 0.13, green: 0.19, blue: 0.24)
-    @State private var backdropBottom: Color = Color(red: 0.09, green: 0.14, blue: 0.18)
+    private var currentBackdrop: BackdropPalette {
+        if let song = player.currentSong {
+            return ArtworkLoader.shared.backdropPalette(for: song, fallbackID: song.id)
+        }
+        return ArtworkLoader.shared.defaultBackdropPalette
+    }
 
     public init(albums: [Album], player: AudioPlayer) {
         self.albums = albums
@@ -33,41 +36,54 @@ public struct CoverStackView: View {
                 selectedAlbumForDetail = nil
             }
         } else {
+            let backdrop = currentBackdrop
+
             ZStack {
                 // MARK: - Dynamic Playing Album Backdrop
                 ZStack {
-                    backdropBottom.ignoresSafeArea()
+                    backdrop.bottom.ignoresSafeArea()
 
                     LinearGradient(
                         colors: [
-                            backdropTop,
-                            backdropMid,
-                            backdropBottom
+                            backdrop.top,
+                            backdrop.mid,
+                            backdrop.bottom
                         ],
                         startPoint: .top,
                         endPoint: .bottom
                     )
                     .ignoresSafeArea()
 
-                    // Atmospheric radial illumination radiating from upper-center
+                    // Atmospheric glowing radial spotlight radiating from upper-center
                     RadialGradient(
                         colors: [
-                            backdropTop.opacity(0.38),
-                            backdropMid.opacity(0.14),
+                            backdrop.primary.opacity(0.40),
+                            backdrop.mid.opacity(0.18),
                             Color.clear
                         ],
-                        center: .init(x: 0.5, y: 0.32),
-                        startRadius: 80,
+                        center: .init(x: 0.5, y: 0.30),
+                        startRadius: 70,
                         endRadius: 750
                     )
                     .ignoresSafeArea()
+
+                    // Ambient glowing color aura for rich visual depth
+                    Circle()
+                        .fill(backdrop.primary.opacity(0.30))
+                        .frame(width: 650, height: 650)
+                        .offset(x: 100, y: -70)
+                        .blur(radius: 120)
+                        .allowsHitTesting(false)
                 }
+                .animation(.easeInOut(duration: 0.80), value: player.currentSong?.id)
                 .contentShape(Rectangle())
                 .onTapGesture {
                     retractPoppedOutAlbum()
                 }
                 .task(id: player.currentSong?.id) {
-                    await updateBackdrop(for: player.currentSong)
+                    if let song = player.currentSong {
+                        _ = await ArtworkLoader.shared.loadArtwork(for: song)
+                    }
                 }
 
                 if albums.isEmpty {
@@ -207,42 +223,12 @@ public struct CoverStackView: View {
                 if !player.isPlaying {
                     player.togglePlayPause()
                 }
-                Task {
-                    await updateBackdrop(for: player.currentSong)
-                }
             } else {
                 // Not playing: start album from the first track
                 if let first = album.songs.first {
                     player.play(song: first, inContext: album.songs)
-                    Task {
-                        await updateBackdrop(for: first)
-                    }
                 }
             }
-        }
-    }
-
-    private func updateBackdrop(for song: Song?) async {
-        guard let song = song else {
-            withAnimation(.easeInOut(duration: 0.85)) {
-                backdropTop = Color(red: 0.18, green: 0.26, blue: 0.32)
-                backdropMid = Color(red: 0.13, green: 0.19, blue: 0.24)
-                backdropBottom = Color(red: 0.09, green: 0.14, blue: 0.18)
-            }
-            return
-        }
-
-        var palette = ArtworkLoader.shared.backdropPalette(for: song, fallbackID: song.id)
-        if ArtworkLoader.shared.cachedImage(for: song) == nil {
-            if let img = await ArtworkLoader.shared.loadArtwork(for: song) {
-                palette = ArtworkLoader.shared.extractBackdropPalette(from: img)
-            }
-        }
-
-        withAnimation(.easeInOut(duration: 0.85)) {
-            backdropTop = palette.top
-            backdropMid = palette.mid
-            backdropBottom = palette.bottom
         }
     }
 
