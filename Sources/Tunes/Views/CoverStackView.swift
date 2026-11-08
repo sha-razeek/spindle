@@ -166,16 +166,27 @@ public struct CoverStackView: View {
     }
 
     private func handleAlbumClick(album: Album) {
+        let isAlreadyPlayingThisAlbum = player.currentSong != nil && album.songs.contains(where: { $0.id == player.currentSong?.id })
+
         if poppedOutAlbumID == album.id {
             // Already popped out: toggle playback
             player.togglePlayPause()
         } else {
-            // Expand this album and smoothly move all albums below it down!
+            // Highlight / expand this album and smoothly move all albums below it down!
             withAnimation(.spring(response: 0.38, dampingFraction: 0.75)) {
                 poppedOutAlbumID = album.id
             }
-            if let first = album.songs.first {
-                player.play(song: first, inContext: album.songs)
+
+            if isAlreadyPlayingThisAlbum {
+                // Already playing: continue playing without starting over!
+                if !player.isPlaying {
+                    player.togglePlayPause()
+                }
+            } else {
+                // Not playing: start album from the first track
+                if let first = album.songs.first {
+                    player.play(song: first, inContext: album.songs)
+                }
             }
         }
     }
