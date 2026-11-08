@@ -76,8 +76,8 @@ public struct CoverStackView: View {
                                 }
                                 .frame(height: 0)
 
-                                // Top room for album slide-up
-                                Color.clear.frame(height: 140)
+                                // Top breathing room
+                                Color.clear.frame(height: 100)
 
                                 // Drawer Albums Stack
                                 LazyVStack(spacing: 0) {
@@ -99,17 +99,46 @@ public struct CoverStackView: View {
                                 }
 
                                 // Bottom breathing room
-                                Color.clear.frame(height: 220)
+                                Color.clear.frame(height: 180)
                             }
                             .frame(maxWidth: .infinity)
                         }
                         .coordinateSpace(name: "CoverScrollSpace")
+                        // Gradient Alpha Mask: Eliminates sudden appearance at bottom/top
+                        .mask(
+                            LinearGradient(
+                                stops: [
+                                    .init(color: .clear, location: 0.0),
+                                    .init(color: .black, location: 0.06),
+                                    .init(color: .black, location: 0.88),
+                                    .init(color: .clear, location: 0.98)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
                         // Track scroll offset changes -> Retract when user scrolls
                         .onPreferenceChange(ScrollOffsetKey.self) { currentY in
                             if abs(currentY - lastScrollY) > 2.0 {
                                 retractPoppedOutAlbum()
                                 lastScrollY = currentY
                             }
+                        }
+
+                        // Bottom Atmospheric Gradient Fade: Albums dissolve smoothly into darkness
+                        VStack {
+                            Spacer()
+                            LinearGradient(
+                                colors: [
+                                    Color.clear,
+                                    Color(red: 0.09, green: 0.14, blue: 0.18).opacity(0.85),
+                                    Color(red: 0.09, green: 0.14, blue: 0.18)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                            .frame(height: 90)
+                            .allowsHitTesting(false)
                         }
                     }
                 }
@@ -152,11 +181,11 @@ public struct CoverStackView: View {
 
     private func handleAlbumClick(album: Album) {
         if poppedOutAlbumID == album.id {
-            // Already taken out: toggle playback
+            // Already popped out: toggle playback
             player.togglePlayPause()
         } else {
-            // Take out of drawer (slide up) and start playing
-            withAnimation(.spring(response: 0.38, dampingFraction: 0.72)) {
+            // Expand this album and smoothly move all albums below it down!
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.75)) {
                 poppedOutAlbumID = album.id
             }
             if let first = album.songs.first {

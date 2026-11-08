@@ -34,23 +34,22 @@ public struct AlbumSlabView: View {
 
     public var body: some View {
         ZStack(alignment: .topLeading) {
-            // MARK: - 1. Vinyl Record Disc (Slides out of the sleeve ~1/8th of the way when selected)
+            // MARK: - 1. Spinning Vinyl Record (slides out to the right when popped out)
             VinylDiscView(
                 artwork: artworkImage,
                 isPlaying: isCurrentlyPlayingThisAlbum && player.isPlaying,
                 size: 210
             )
-            // Positioned behind jacket, slides out to the right when popped out
             .position(
                 x: isPoppedOut ? 425 : 240,
-                y: isPoppedOut ? 140 : 130
+                y: isPoppedOut ? 160 : 130
             )
             .opacity(isPoppedOut ? 1.0 : (isHovered ? 0.35 : 0.0))
-            .animation(.spring(response: 0.42, dampingFraction: 0.72), value: isPoppedOut)
+            .animation(.spring(response: 0.40, dampingFraction: 0.75), value: isPoppedOut)
 
-            // MARK: - 2. Front Album Jacket (Drawer Sleeve)
+            // MARK: - 2. Front Album Jacket
             VStack(spacing: 0) {
-                // Top Spine Edge (Visible in drawer)
+                // Top Spine Edge (Clean, distinct, always visible)
                 HStack(spacing: 8) {
                     if isCurrentlyPlayingThisAlbum && player.isPlaying {
                         Image(systemName: "speaker.wave.2.fill")
@@ -59,7 +58,7 @@ public struct AlbumSlabView: View {
                             .padding(.trailing, 2)
                     }
 
-                    // Bold Album / Song Title
+                    // Bold Album Title
                     Text(album.title)
                         .font(.system(size: 13, weight: .bold))
                         .foregroundColor(spineTextColor)
@@ -86,7 +85,7 @@ public struct AlbumSlabView: View {
                 .frame(width: 480, height: 32)
                 .background(spineBgColor)
                 .overlay(
-                    // Top highlight ridge catching drawer light and bottom shadow ridge
+                    // Top highlight ridge catching drawer lighting
                     VStack {
                         Rectangle()
                             .fill(Color.white.opacity(0.40))
@@ -101,11 +100,11 @@ public struct AlbumSlabView: View {
                     color: Color.black.opacity(isPoppedOut ? 0.45 : 0.25),
                     radius: isPoppedOut ? 10 : 4,
                     x: 0,
-                    y: isPoppedOut ? 5 : 2
+                    y: isPoppedOut ? 4 : 2
                 )
                 .zIndex(10)
 
-                // Album Artwork Jacket Surface (Straight, natural perspective)
+                // Album Artwork Jacket
                 ZStack(alignment: .center) {
                     if let image = artworkImage {
                         Image(nsImage: image)
@@ -122,7 +121,7 @@ public struct AlbumSlabView: View {
                             .foregroundColor(.white.opacity(0.8))
                     }
 
-                    // Gentle subtle lighting sheen
+                    // Gentle lighting sheen
                     LinearGradient(
                         colors: [
                             Color.white.opacity(isPoppedOut ? 0.20 : 0.10),
@@ -133,7 +132,7 @@ public struct AlbumSlabView: View {
                         endPoint: .bottom
                     )
 
-                    // Controls Overlay when Album is Taken Out of the Drawer
+                    // Overlay Controls when Popped Out
                     if isPoppedOut {
                         VStack {
                             Spacer()
@@ -185,10 +184,10 @@ public struct AlbumSlabView: View {
                         .transition(.scale.combined(with: .opacity))
                     }
                 }
-                .frame(width: 480, height: isPoppedOut ? 280 : 220)
+                .frame(width: 480, height: isPoppedOut ? 260 : 220)
                 .clipped()
                 .overlay(
-                    // Clean parallel side sleeve borders
+                    // Clean sleeve side borders
                     HStack {
                         Rectangle().fill(Color.white.opacity(0.20)).frame(width: 1)
                         Spacer()
@@ -205,11 +204,11 @@ public struct AlbumSlabView: View {
                 y: isPoppedOut ? 16 : (isHovered ? 5 : 2)
             )
         }
-        // When clicked, the album slides UP out of the drawer!
-        .offset(y: isPoppedOut ? -110 : (isHovered ? -5 : 0))
-        .frame(width: 520, height: 62)
+        // Expand the row slot when popped out so the albums below move down cleanly!
+        .frame(width: 550, height: isPoppedOut ? 300 : 56, alignment: .top)
+        .offset(y: (isHovered && !isPoppedOut) ? -3 : 0)
         .zIndex(isPoppedOut ? 999 : 0)
-        .animation(.spring(response: 0.38, dampingFraction: 0.72), value: isPoppedOut)
+        .animation(.spring(response: 0.38, dampingFraction: 0.75), value: isPoppedOut)
         .animation(.easeInOut(duration: 0.15), value: isHovered)
         .contentShape(Rectangle())
         .onHover { hovering in
