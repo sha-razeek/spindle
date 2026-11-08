@@ -91,7 +91,12 @@ public struct AlbumSlabView: View {
 
     private var isCurrentlyPlayingThisAlbum: Bool {
         guard let current = player.currentSong else { return false }
-        return album.songs.contains(where: { $0.id == current.id })
+        if album.songs.contains(where: { $0.id == current.id }) { return true }
+        let currentArtist = current.albumArtistName.isEmpty ? current.artistName : current.albumArtistName
+        let sameArtist = album.artistName.localizedCaseInsensitiveCompare(currentArtist) == .orderedSame ||
+                         album.artistName.localizedCaseInsensitiveCompare(current.artistName) == .orderedSame
+        let sameAlbum = album.title.localizedCaseInsensitiveCompare(current.albumTitle) == .orderedSame
+        return sameArtist && sameAlbum
     }
 
     public init(
@@ -345,14 +350,20 @@ public struct AlbumSlabView: View {
         .task(id: album.id) {
             await loadArtworkAndSpineColor()
         }
+        .task(id: player.currentSong?.id) {
+            if isCurrentlyPlayingThisAlbum {
+                await loadArtworkAndSpineColor()
+            }
+        }
     }
 
     private func loadArtworkAndSpineColor() async {
-        let initialColors = ArtworkLoader.shared.spineColors(for: album.representativeSong, fallbackID: album.id)
+        let targetSong = (isCurrentlyPlayingThisAlbum ? player.currentSong : nil) ?? album.representativeSong
+        let initialColors = ArtworkLoader.shared.spineColors(for: targetSong ?? album.representativeSong, fallbackID: album.id)
         self.spineBgColor = initialColors.bg
         self.spineTextColor = initialColors.text
 
-        guard let song = album.representativeSong else { return }
+        guard let song = targetSong ?? album.representativeSong else { return }
 
         if let cached = ArtworkLoader.shared.cachedImage(for: song) {
             self.artworkImage = cached

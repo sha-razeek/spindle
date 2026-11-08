@@ -25,6 +25,19 @@ public struct CoverStackView: View {
         return ArtworkLoader.shared.defaultBackdropPalette
     }
 
+    private var currentlyPlayingAlbum: Album? {
+        guard let song = player.currentSong else { return nil }
+        if let match = albums.first(where: { $0.songs.contains(where: { $0.id == song.id }) }) {
+            return match
+        }
+        let songArtist = song.albumArtistName.isEmpty ? song.artistName : song.albumArtistName
+        return albums.first(where: {
+            $0.title.localizedCaseInsensitiveCompare(song.albumTitle) == .orderedSame &&
+            ($0.artistName.localizedCaseInsensitiveCompare(songArtist) == .orderedSame ||
+             $0.artistName.localizedCaseInsensitiveCompare(song.artistName) == .orderedSame)
+        })
+    }
+
     public init(albums: [Album], player: AudioPlayer) {
         self.albums = albums
         self.player = player
@@ -150,6 +163,20 @@ public struct CoverStackView: View {
                                     lastScrollY = currentY
                                 }
                             }
+                            .onAppear {
+                                scrollToPlayingAlbum(proxy: proxy, force: true)
+                            }
+                            .onChange(of: albums.count) { _, newCount in
+                                if newCount > 0 && poppedOutAlbumID == nil {
+                                    scrollToPlayingAlbum(proxy: proxy, force: false)
+                                }
+                            }
+                            .onChange(of: player.currentSong?.id) { _, newSongID in
+                                guard newSongID != nil else { return }
+                                if let playingAlbum = currentlyPlayingAlbum, playingAlbum.id != poppedOutAlbumID {
+                                    scrollToPlayingAlbum(proxy: proxy, force: false)
+                                }
+                            }
                         }
                     }
                 }
@@ -190,6 +217,41 @@ public struct CoverStackView: View {
         }
     }
 
+    private func centerAlbum(_ album: Album, proxy: ScrollViewProxy, animated: Bool = true) {
+        isProgrammaticScroll = true
+        programmaticScrollTask?.cancel()
+
+        withAnimation(animated ? .spring(response: 0.42, dampingFraction: 0.80) : nil) {
+            poppedOutAlbumID = album.id
+            proxy.scrollTo(album.id, anchor: .center)
+        }
+
+        programmaticScrollTask = Task { @MainActor in
+            // Stage 1: Quick frame to prime lazy elements around target
+            try? await Task.sleep(nanoseconds: 60_000_000)
+            withAnimation(animated ? .spring(response: 0.42, dampingFraction: 0.80) : nil) {
+                proxy.scrollTo(album.id, anchor: .center)
+            }
+
+            // Stage 2: Secondary refinement once slab expansion (614pt) and breathing room settle
+            try? await Task.sleep(nanoseconds: 120_000_000)
+            withAnimation(animated ? .spring(response: 0.42, dampingFraction: 0.80) : nil) {
+                proxy.scrollTo(album.id, anchor: .center)
+            }
+
+            // Stage 3: Hold the programmatic scroll guard until inertia and spring animation settle
+            try? await Task.sleep(nanoseconds: 480_000_000)
+            isProgrammaticScroll = false
+        }
+    }
+
+    private func scrollToPlayingAlbum(proxy: ScrollViewProxy, force: Bool = false) {
+        guard let album = currentlyPlayingAlbum else { return }
+        if force || poppedOutAlbumID != album.id {
+            centerAlbum(album, proxy: proxy)
+        }
+    }
+
     private func handleAlbumClick(album: Album, proxy: ScrollViewProxy) {
         let isAlreadyPlayingThisAlbum = player.currentSong != nil && album.songs.contains(where: { $0.id == player.currentSong?.id })
 
@@ -197,26 +259,7 @@ public struct CoverStackView: View {
             // Already popped out: toggle playback
             player.togglePlayPause()
         } else {
-            // Flag programmatic scroll to prevent auto-retraction during centering
-            isProgrammaticScroll = true
-            programmaticScrollTask?.cancel()
-
-            // Highlight, expand and center this album smoothly
-            withAnimation(.spring(response: 0.42, dampingFraction: 0.80)) {
-                poppedOutAlbumID = album.id
-                proxy.scrollTo(album.id, anchor: .center)
-            }
-
-            programmaticScrollTask = Task { @MainActor in
-                // Secondary alignment tick once dynamic row height updates in layout tree
-                try? await Task.sleep(nanoseconds: 60_000_000)
-                withAnimation(.spring(response: 0.42, dampingFraction: 0.80)) {
-                    proxy.scrollTo(album.id, anchor: .center)
-                }
-                // Retain guard until spring settling completes
-                try? await Task.sleep(nanoseconds: 480_000_000)
-                isProgrammaticScroll = false
-            }
+            centerAlbum(album, proxy: proxy)
 
             if isAlreadyPlayingThisAlbum {
                 // Already playing: continue playing without starting over!
