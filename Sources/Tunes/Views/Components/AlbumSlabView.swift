@@ -42,7 +42,7 @@ public struct AlbumSlabView: View {
             )
             .position(
                 x: isPoppedOut ? 435 : 240,
-                y: isPoppedOut ? 222 : 140
+                y: isPoppedOut ? 246 : 150
             )
             .opacity(isPoppedOut ? 1.0 : (isHovered ? 0.35 : 0.0))
             .animation(.spring(response: 0.40, dampingFraction: 0.75), value: isPoppedOut)
@@ -92,8 +92,8 @@ public struct AlbumSlabView: View {
                             .frame(height: 1.5)
                         Spacer()
                         Rectangle()
-                            .fill(Color.black.opacity(0.35))
-                            .frame(height: 1)
+                            .fill(Color.black.opacity(0.40))
+                            .frame(height: 1.5)
                     }
                 )
                 .shadow(
@@ -126,7 +126,7 @@ public struct AlbumSlabView: View {
                         colors: [
                             Color.white.opacity(isPoppedOut ? 0.20 : 0.08),
                             Color.clear,
-                            Color.black.opacity(isPoppedOut ? 0.10 : 0.35)
+                            Color.black.opacity(isPoppedOut ? 0.10 : 0.40)
                         ],
                         startPoint: .top,
                         endPoint: .bottom
@@ -140,15 +140,23 @@ public struct AlbumSlabView: View {
                                 Button {
                                     player.togglePlayPause()
                                 } label: {
-                                    ZStack {
-                                        Circle()
-                                            .fill(Color.black.opacity(0.70))
-                                            .frame(width: 54, height: 54)
+                                    HStack(spacing: 8) {
                                         Image(systemName: (isCurrentlyPlayingThisAlbum && player.isPlaying) ? "pause.fill" : "play.fill")
-                                            .font(.system(size: 22, weight: .bold))
-                                            .foregroundColor(.white)
-                                            .offset(x: (isCurrentlyPlayingThisAlbum && player.isPlaying) ? 0 : 2)
+                                            .font(.system(size: 15, weight: .bold))
+                                        Text((isCurrentlyPlayingThisAlbum && player.isPlaying) ? "Pause" : "Play")
+                                            .font(.system(size: 13, weight: .semibold))
                                     }
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 18)
+                                    .padding(.vertical, 9)
+                                    .background(
+                                        Capsule()
+                                            .fill(Color.black.opacity(0.75))
+                                            .overlay(
+                                                Capsule()
+                                                    .stroke(Color.white.opacity(0.25), lineWidth: 1)
+                                            )
+                                    )
                                 }
                                 .buttonStyle(.plain)
 
@@ -157,19 +165,25 @@ public struct AlbumSlabView: View {
                                 } label: {
                                     HStack(spacing: 6) {
                                         Image(systemName: "list.bullet")
-                                        Text("Tracks")
+                                        Text("View Tracks")
                                     }
                                     .font(.system(size: 13, weight: .semibold))
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 8)
-                                    .background(Color.black.opacity(0.70))
                                     .foregroundColor(.white)
-                                    .clipShape(Capsule())
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 9)
+                                    .background(
+                                        Capsule()
+                                            .fill(Color.black.opacity(0.75))
+                                            .overlay(
+                                                Capsule()
+                                                    .stroke(Color.white.opacity(0.25), lineWidth: 1)
+                                            )
+                                    )
                                 }
                                 .buttonStyle(.plain)
                             }
-                            .padding(.bottom, 22)
-                            .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                            .padding(.bottom, 18)
+                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
                         }
                     } else if isHovered {
                         ZStack {
@@ -184,7 +198,7 @@ public struct AlbumSlabView: View {
                         .transition(.scale.combined(with: .opacity))
                     }
                 }
-                .frame(width: 480, height: isPoppedOut ? 380 : 240)
+                .frame(width: 480, height: isPoppedOut ? 460 : 240)
                 .clipped()
                 .overlay(
                     // Clean sleeve side borders
@@ -198,10 +212,10 @@ public struct AlbumSlabView: View {
             .frame(width: 480)
             .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
             .rotation3DEffect(
-                .degrees(isPoppedOut ? 0 : -13),
+                .degrees(isPoppedOut ? 0 : -28),
                 axis: (x: 1, y: 0, z: 0),
                 anchor: .top,
-                perspective: 0.2
+                perspective: 0.35
             )
             .shadow(
                 color: Color.black.opacity(isPoppedOut ? 0.65 : (isHovered ? 0.38 : 0.22)),
@@ -210,8 +224,8 @@ public struct AlbumSlabView: View {
                 y: isPoppedOut ? 18 : (isHovered ? 6 : 3)
             )
         }
-        // Expand the row slot when popped out so the albums below move down cleanly!
-        .frame(width: 590, height: isPoppedOut ? 420 : 80, alignment: .top)
+        // Expand the row slot when popped out so the whole cover and controls are visible!
+        .frame(width: 590, height: isPoppedOut ? 530 : 88, alignment: .top)
         .offset(y: (isHovered && !isPoppedOut) ? -4 : 0)
         .zIndex(isPoppedOut ? 999 : 0)
         .animation(.spring(response: 0.38, dampingFraction: 0.75), value: isPoppedOut)

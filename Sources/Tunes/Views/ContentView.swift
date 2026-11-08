@@ -51,6 +51,15 @@ public struct ContentView: View {
             }
             .listStyle(.sidebar)
             .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 300)
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    if showExpandedNowPlaying {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                            showExpandedNowPlaying = false
+                        }
+                    }
+                }
+            )
             .safeAreaInset(edge: .bottom) {
                 // Bottom Library Status
                 VStack(spacing: 6) {
@@ -163,6 +172,13 @@ public struct ContentView: View {
         .searchable(text: $library.searchQuery, prompt: "Search songs, artists, albums...")
         .onChange(of: library.searchQuery) { _, _ in
             library.rebuildCollections()
+        }
+        .onChange(of: selectedItem) { _, _ in
+            if showExpandedNowPlaying {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    showExpandedNowPlaying = false
+                }
+            }
         }
         .frame(minWidth: 900, minHeight: 600)
     }

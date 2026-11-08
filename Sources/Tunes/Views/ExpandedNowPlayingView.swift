@@ -140,38 +140,37 @@ public struct ExpandedNowPlayingView: View {
                 // Main Expanded Body
                 if let song = currentSong {
                     ScrollView(.vertical, showsIndicators: false) {
-                        HStack(alignment: .top, spacing: 44) {
-                            // MARK: - Left: Large Artwork & Controls
-                            VStack(spacing: 24) {
+                        HStack(alignment: .top, spacing: 48) {
+                            // MARK: - Left: Large Artwork & Scrubber
+                            VStack(alignment: .leading, spacing: 20) {
                                 // Large Album Art inside Rounded Rectangle Mask
-                                ArtworkView(song: song, cornerRadius: 22, size: 380)
+                                ArtworkView(song: song, cornerRadius: 20, size: 360)
                                     .shadow(color: Color.black.opacity(0.65), radius: 36, x: 0, y: 20)
                                     .overlay(
-                                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                        RoundedRectangle(cornerRadius: 20, style: .continuous)
                                             .stroke(Color.white.opacity(0.18), lineWidth: 1.5)
                                     )
 
-                                // Track Information
-                                VStack(spacing: 6) {
+                                // Track Information (Left aligned)
+                                VStack(alignment: .leading, spacing: 6) {
                                     Text(song.title)
-                                        .font(.system(size: 28, weight: .bold))
+                                        .font(.system(size: 26, weight: .bold))
                                         .foregroundColor(.white)
-                                        .multilineTextAlignment(.center)
                                         .lineLimit(2)
 
                                     Text(song.artistName)
-                                        .font(.system(size: 20, weight: .semibold))
+                                        .font(.system(size: 18, weight: .semibold))
                                         .foregroundColor(.white.opacity(0.9))
                                         .lineLimit(1)
 
                                     Text(song.albumTitle)
-                                        .font(.system(size: 16, weight: .medium))
+                                        .font(.system(size: 15, weight: .medium))
                                         .foregroundColor(.white.opacity(0.65))
                                         .lineLimit(1)
                                 }
-                                .frame(maxWidth: 420)
+                                .frame(width: 360, alignment: .leading)
 
-                                // Scrubber Slider
+                                // Minimal Scrubber Slider (no full button list)
                                 VStack(spacing: 8) {
                                     Slider(
                                         value: Binding(
@@ -200,76 +199,20 @@ public struct ExpandedNowPlayingView: View {
                                             .foregroundColor(.white.opacity(0.65))
                                     }
                                 }
-                                .frame(width: 400)
-
-                                // Transport Playback Controls
-                                HStack(spacing: 28) {
-                                    Button {
-                                        player.isShuffleEnabled.toggle()
-                                    } label: {
-                                        Image(systemName: "shuffle")
-                                            .font(.system(size: 16, weight: .semibold))
-                                            .foregroundColor(player.isShuffleEnabled ? .white : .white.opacity(0.45))
-                                    }
-                                    .buttonStyle(.plain)
-
-                                    Button {
-                                        player.previousTrack()
-                                    } label: {
-                                        Image(systemName: "backward.fill")
-                                            .font(.system(size: 22))
-                                            .foregroundColor(.white)
-                                    }
-                                    .buttonStyle(.plain)
-
-                                    Button {
-                                        player.togglePlayPause()
-                                    } label: {
-                                        ZStack {
-                                            Circle()
-                                                .fill(Color.white)
-                                                .frame(width: 58, height: 58)
-                                                .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
-                                            Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                                                .font(.system(size: 24, weight: .bold))
-                                                .foregroundColor(.black)
-                                                .offset(x: player.isPlaying ? 0 : 2)
-                                        }
-                                    }
-                                    .buttonStyle(.plain)
-
-                                    Button {
-                                        player.nextTrack()
-                                    } label: {
-                                        Image(systemName: "forward.fill")
-                                            .font(.system(size: 22))
-                                            .foregroundColor(.white)
-                                    }
-                                    .buttonStyle(.plain)
-
-                                    Button {
-                                        player.cycleRepeatMode()
-                                    } label: {
-                                        Image(systemName: player.repeatMode.iconName)
-                                            .font(.system(size: 16, weight: .semibold))
-                                            .foregroundColor(player.repeatMode != .off ? .white : .white.opacity(0.45))
-                                    }
-                                    .buttonStyle(.plain)
-                                }
+                                .frame(width: 360)
                             }
-                            .frame(maxWidth: 480)
+                            .frame(width: 360)
 
-                            // MARK: - Right: Album Details & Tracklist
-                            VStack(alignment: .leading, spacing: 20) {
-                                // Metadata Card
-                                VStack(alignment: .leading, spacing: 14) {
+                            // MARK: - Right: Album Details & Tracklist (Frameless, Left Aligned)
+                            VStack(alignment: .leading, spacing: 28) {
+                                // Metadata (No box!)
+                                VStack(alignment: .leading, spacing: 12) {
                                     Text("ALBUM DETAILS")
-                                        .font(.caption)
-                                        .fontWeight(.bold)
-                                        .tracking(1.2)
-                                        .foregroundColor(.white.opacity(0.6))
+                                        .font(.system(size: 11, weight: .bold))
+                                        .tracking(1.4)
+                                        .foregroundColor(.white.opacity(0.55))
 
-                                    VStack(alignment: .leading, spacing: 10) {
+                                    VStack(alignment: .leading, spacing: 8) {
                                         if let alb = currentAlbum {
                                             metadataRow(label: "Album", value: alb.title)
                                             metadataRow(label: "Artist", value: alb.artistName)
@@ -278,7 +221,9 @@ public struct ExpandedNowPlayingView: View {
                                                 metadataRow(label: "Year", value: "\(alb.year)")
                                             }
                                         }
-                                        metadataRow(label: "Genre", value: song.genre)
+                                        if !song.genre.isEmpty {
+                                            metadataRow(label: "Genre", value: song.genre)
+                                        }
                                         if song.playCount > 0 {
                                             metadataRow(label: "Plays", value: "\(song.playCount) times")
                                         }
@@ -286,8 +231,6 @@ public struct ExpandedNowPlayingView: View {
                                             metadataRow(label: "Format", value: loc.pathExtension.uppercased())
                                         }
                                     }
-
-                                    Divider().background(Color.white.opacity(0.15))
 
                                     if let url = song.location {
                                         Button {
@@ -297,35 +240,30 @@ public struct ExpandedNowPlayingView: View {
                                                 Image(systemName: "folder")
                                                 Text("Show Original File in Finder")
                                             }
-                                            .font(.system(size: 12, weight: .medium))
-                                            .foregroundColor(.white.opacity(0.85))
+                                            .font(.system(size: 11, weight: .medium))
+                                            .foregroundColor(.white.opacity(0.75))
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 5)
+                                            .background(Color.white.opacity(0.12))
+                                            .cornerRadius(6)
                                         }
                                         .buttonStyle(.plain)
+                                        .padding(.top, 4)
                                     }
                                 }
-                                .padding(18)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                        .fill(.ultraThinMaterial)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                                .stroke(Color.white.opacity(0.12), lineWidth: 1)
-                                        )
-                                )
 
-                                // Album Tracks List
+                                // Album Tracks List (No box!)
                                 if let album = currentAlbum {
-                                    VStack(alignment: .leading, spacing: 10) {
+                                    VStack(alignment: .leading, spacing: 12) {
                                         Text("ALBUM TRACKLIST")
-                                            .font(.caption)
-                                            .fontWeight(.bold)
-                                            .tracking(1.2)
-                                            .foregroundColor(.white.opacity(0.6))
+                                            .font(.system(size: 11, weight: .bold))
+                                            .tracking(1.4)
+                                            .foregroundColor(.white.opacity(0.55))
 
                                         VStack(spacing: 2) {
                                             ForEach(album.songs) { albumSong in
                                                 let isThisPlaying = (albumSong.id == currentSong?.id)
-                                                HStack(spacing: 10) {
+                                                HStack(spacing: 12) {
                                                     ZStack {
                                                         if isThisPlaying && player.isPlaying {
                                                             Image(systemName: "speaker.wave.2.fill")
@@ -334,13 +272,13 @@ public struct ExpandedNowPlayingView: View {
                                                         } else {
                                                             Text("\(albumSong.trackNumber > 0 ? "\(albumSong.trackNumber)" : "-")")
                                                                 .font(.system(size: 11, design: .monospaced))
-                                                                .foregroundColor(.white.opacity(0.5))
+                                                                .foregroundColor(.white.opacity(0.45))
                                                         }
                                                     }
-                                                    .frame(width: 22)
+                                                    .frame(width: 22, alignment: .trailing)
 
                                                     Text(albumSong.title)
-                                                        .font(.system(size: 12, weight: isThisPlaying ? .semibold : .regular))
+                                                        .font(.system(size: 13, weight: isThisPlaying ? .semibold : .regular))
                                                         .foregroundColor(isThisPlaying ? .white : .white.opacity(0.85))
                                                         .lineLimit(1)
 
@@ -348,13 +286,13 @@ public struct ExpandedNowPlayingView: View {
 
                                                     Text(albumSong.formattedDuration)
                                                         .font(.system(size: 11, design: .monospaced))
-                                                        .foregroundColor(.white.opacity(0.5))
+                                                        .foregroundColor(.white.opacity(0.45))
                                                 }
-                                                .padding(.horizontal, 10)
-                                                .padding(.vertical, 5)
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 6)
                                                 .background(
                                                     RoundedRectangle(cornerRadius: 6)
-                                                        .fill(isThisPlaying ? Color.white.opacity(0.20) : Color.clear)
+                                                        .fill(isThisPlaying ? Color.white.opacity(0.18) : Color.white.opacity(0.001))
                                                 )
                                                 .contentShape(Rectangle())
                                                 .onTapGesture {
@@ -363,20 +301,11 @@ public struct ExpandedNowPlayingView: View {
                                             }
                                         }
                                     }
-                                    .padding(18)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                            .fill(.ultraThinMaterial)
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
-                                            )
-                                    )
                                 }
                             }
-                            .frame(maxWidth: 380)
+                            .frame(maxWidth: 420, alignment: .leading)
                         }
-                        .padding(.horizontal, 32)
+                        .padding(.horizontal, 36)
                         .padding(.top, 16)
                         .padding(.bottom, 36)
                     }
@@ -396,16 +325,15 @@ public struct ExpandedNowPlayingView: View {
     }
 
     private func metadataRow(label: String, value: String) -> some View {
-        HStack {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
             Text(label)
                 .font(.system(size: 12))
-                .foregroundColor(.white.opacity(0.5))
-                .frame(width: 60, alignment: .leading)
+                .foregroundColor(.white.opacity(0.45))
+                .frame(width: 65, alignment: .leading)
             Text(value)
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(.white.opacity(0.9))
                 .lineLimit(1)
-            Spacer()
         }
     }
 
