@@ -14,18 +14,31 @@ public final class SpineColors: NSObject {
     }
 }
 
+public final class BackdropPalette: NSObject {
+    public let top: Color
+    public let mid: Color
+    public let bottom: Color
+    public init(top: Color, mid: Color, bottom: Color) {
+        self.top = top
+        self.mid = mid
+        self.bottom = bottom
+    }
+}
+
 @MainActor
 public final class ArtworkLoader: ObservableObject {
     public static let shared = ArtworkLoader()
 
     private let cache = NSCache<NSString, NSImage>()
     private let colorCache = NSCache<NSString, SpineColors>()
+    private let backdropCache = NSCache<NSString, BackdropPalette>()
     private var itunesLibrary: ITLibrary?
     private var itemsByPID: [UInt64: ITLibMediaItem] = [:]
 
     public init() {
         cache.countLimit = 1500
         colorCache.countLimit = 3000
+        backdropCache.countLimit = 3000
     }
 
     public func setLibrary(_ library: ITLibrary?) {
@@ -58,12 +71,16 @@ public final class ArtworkLoader: ObservableObject {
                 cache.setObject(img, forKey: key)
                 let colors = extractSpineColor(from: img)
                 colorCache.setObject(SpineColors(bg: colors.bg, text: colors.text), forKey: key)
+                let backdrop = extractBackdropPalette(from: img)
+                backdropCache.setObject(backdrop, forKey: key)
                 return img
             } else if let img = art.image {
                 let thumb = downsample(image: img, maxPixelSize: 600)
                 cache.setObject(thumb, forKey: key)
                 let colors = extractSpineColor(from: thumb)
                 colorCache.setObject(SpineColors(bg: colors.bg, text: colors.text), forKey: key)
+                let backdrop = extractBackdropPalette(from: thumb)
+                backdropCache.setObject(backdrop, forKey: key)
                 return thumb
             }
         }
@@ -75,6 +92,8 @@ public final class ArtworkLoader: ObservableObject {
                 cache.setObject(thumb, forKey: key)
                 let colors = extractSpineColor(from: thumb)
                 colorCache.setObject(SpineColors(bg: colors.bg, text: colors.text), forKey: key)
+                let backdrop = extractBackdropPalette(from: thumb)
+                backdropCache.setObject(backdrop, forKey: key)
                 return thumb
             }
         }
@@ -203,6 +222,116 @@ public final class ArtworkLoader: ObservableObject {
         ]
         let hash = abs(id.hashValue)
         return palettes[hash % palettes.count]
+    }
+
+    public var defaultBackdropPalette: BackdropPalette {
+        BackdropPalette(
+            top: Color(red: 0.18, green: 0.26, blue: 0.32),
+            mid: Color(red: 0.13, green: 0.19, blue: 0.24),
+            bottom: Color(red: 0.09, green: 0.14, blue: 0.18)
+        )
+    }
+
+    public func extractBackdropPalette(from image: NSImage) -> BackdropPalette {
+        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            return defaultBackdropPalette
+        }
+
+        let width = 24
+        let height = 24
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        var rawData = [UInt8](repeating: 0, count: width * height * 4)
+
+        guard let context = CGContext(
+            data: &rawData,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: width * 4,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            return defaultBackdropPalette
+        }
+
+        context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+
+        var totR: CGFloat = 0
+        var totG: CGFloat = 0
+        var totB: CGFloat = 0
+        var totWeight: CGFloat = 0
+
+        for y in 0..<height {
+            for x in 0..<width {
+                let offset = (y * width + x) * 4
+                let a = CGFloat(rawData[offset + 3]) / 255.0
+                guard a > 0.15 else { continue }
+
+                let r = (CGFloat(rawData[offset]) / 255.0) / a
+                let g = (CGFloat(rawData[offset + 1]) / 255.0) / a
+                let b = (CGFloat(rawData[offset + 2]) / 255.0) / a
+
+                let maxC = max(r, max(g, b))
+                let minC = min(r, min(g, b))
+                let sat = maxC > 0.01 ? (maxC - minC) / maxC : 0.0
+                let weight = 0.25 + sat * 0.75
+
+                totR += r * weight
+                totG += g * weight
+                totB += b * weight
+                totWeight += weight
+            }
+        }
+
+        guard totWeight > 0 else { return defaultBackdropPalette }
+
+        let avgR = totR / totWeight
+        let avgG = totG / totWeight
+        let avgB = totB / totWeight
+
+        let nsColor = NSColor(red: avgR, green: avgG, blue: avgB, alpha: 1.0)
+        var hue: CGFloat = 0
+        var sat: CGFloat = 0
+        var bri: CGFloat = 0
+        var alpha: CGFloat = 0
+        nsColor.getHue(&hue, saturation: &sat, brightness: &bri, alpha: &alpha)
+
+        if sat < 0.08 {
+            return BackdropPalette(
+                top: Color(white: 0.22),
+                mid: Color(white: 0.14),
+                bottom: Color(white: 0.07)
+            )
+        }
+
+        let richSat = min(max(sat, 0.40), 0.85)
+        let topColor = Color(hue: Double(hue), saturation: Double(richSat * 0.78), brightness: 0.28)
+        let midColor = Color(hue: Double((hue + 0.03).truncatingRemainder(dividingBy: 1.0)), saturation: Double(richSat * 0.65), brightness: 0.16)
+        let bottomColor = Color(hue: Double(hue), saturation: Double(richSat * 0.50), brightness: 0.08)
+
+        return BackdropPalette(top: topColor, mid: midColor, bottom: bottomColor)
+    }
+
+    public func backdropPalette(for song: Song?, fallbackID: String) -> BackdropPalette {
+        guard let song = song else {
+            return defaultBackdropPalette
+        }
+        let key = song.id as NSString
+        if let cached = backdropCache.object(forKey: key) {
+            return cached
+        }
+        if let image = cache.object(forKey: key) {
+            let palette = extractBackdropPalette(from: image)
+            backdropCache.setObject(palette, forKey: key)
+            return palette
+        }
+        let spine = defaultPalette(for: fallbackID)
+        let fallback = BackdropPalette(
+            top: spine.bg.opacity(0.35),
+            mid: spine.bg.opacity(0.18),
+            bottom: Color(red: 0.09, green: 0.14, blue: 0.18)
+        )
+        return fallback
     }
 
     private func extractArtworkFromFile(url: URL) async -> NSImage? {

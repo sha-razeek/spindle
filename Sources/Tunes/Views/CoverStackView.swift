@@ -17,6 +17,11 @@ public struct CoverStackView: View {
     @State private var isProgrammaticScroll: Bool = false
     @State private var programmaticScrollTask: Task<Void, Never>? = nil
 
+    // Dynamic Backdrop Colors derived from currently playing album
+    @State private var backdropTop: Color = Color(red: 0.18, green: 0.26, blue: 0.32)
+    @State private var backdropMid: Color = Color(red: 0.13, green: 0.19, blue: 0.24)
+    @State private var backdropBottom: Color = Color(red: 0.09, green: 0.14, blue: 0.18)
+
     public init(albums: [Album], player: AudioPlayer) {
         self.albums = albums
         self.player = player
@@ -29,20 +34,40 @@ public struct CoverStackView: View {
             }
         } else {
             ZStack {
-                // MARK: - Studio Drawer Backdrop Gradient
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.18, green: 0.26, blue: 0.32),
-                        Color(red: 0.13, green: 0.19, blue: 0.24),
-                        Color(red: 0.09, green: 0.14, blue: 0.18)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
+                // MARK: - Dynamic Playing Album Backdrop
+                ZStack {
+                    backdropBottom.ignoresSafeArea()
+
+                    LinearGradient(
+                        colors: [
+                            backdropTop,
+                            backdropMid,
+                            backdropBottom
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .ignoresSafeArea()
+
+                    // Atmospheric radial illumination radiating from upper-center
+                    RadialGradient(
+                        colors: [
+                            backdropTop.opacity(0.38),
+                            backdropMid.opacity(0.14),
+                            Color.clear
+                        ],
+                        center: .init(x: 0.5, y: 0.32),
+                        startRadius: 80,
+                        endRadius: 750
+                    )
+                    .ignoresSafeArea()
+                }
                 .contentShape(Rectangle())
                 .onTapGesture {
                     retractPoppedOutAlbum()
+                }
+                .task(id: player.currentSong?.id) {
+                    await updateBackdrop(for: player.currentSong)
                 }
 
                 if albums.isEmpty {
@@ -182,12 +207,42 @@ public struct CoverStackView: View {
                 if !player.isPlaying {
                     player.togglePlayPause()
                 }
+                Task {
+                    await updateBackdrop(for: player.currentSong)
+                }
             } else {
                 // Not playing: start album from the first track
                 if let first = album.songs.first {
                     player.play(song: first, inContext: album.songs)
+                    Task {
+                        await updateBackdrop(for: first)
+                    }
                 }
             }
+        }
+    }
+
+    private func updateBackdrop(for song: Song?) async {
+        guard let song = song else {
+            withAnimation(.easeInOut(duration: 0.85)) {
+                backdropTop = Color(red: 0.18, green: 0.26, blue: 0.32)
+                backdropMid = Color(red: 0.13, green: 0.19, blue: 0.24)
+                backdropBottom = Color(red: 0.09, green: 0.14, blue: 0.18)
+            }
+            return
+        }
+
+        var palette = ArtworkLoader.shared.backdropPalette(for: song, fallbackID: song.id)
+        if ArtworkLoader.shared.cachedImage(for: song) == nil {
+            if let img = await ArtworkLoader.shared.loadArtwork(for: song) {
+                palette = ArtworkLoader.shared.extractBackdropPalette(from: img)
+            }
+        }
+
+        withAnimation(.easeInOut(duration: 0.85)) {
+            backdropTop = palette.top
+            backdropMid = palette.mid
+            backdropBottom = palette.bottom
         }
     }
 
