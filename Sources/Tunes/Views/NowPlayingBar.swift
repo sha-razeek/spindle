@@ -3,16 +3,41 @@ import AppKit
 
 public struct NowPlayingBar: View {
     @ObservedObject var player: AudioPlayer
+    var onExpand: (() -> Void)? = nil
+
     @State private var isDraggingScrubber: Bool = false
     @State private var scrubTime: TimeInterval = 0
     @State private var showQueuePopover: Bool = false
+    @State private var isHoveringThumbnail: Bool = false
+
+    public init(player: AudioPlayer, onExpand: (() -> Void)? = nil) {
+        self.player = player
+        self.onExpand = onExpand
+    }
 
     public var body: some View {
         HStack(spacing: 16) {
             // MARK: - Left: Track Info & Artwork
             HStack(spacing: 12) {
                 if let song = player.currentSong {
-                    ArtworkView(song: song, cornerRadius: 6, size: 48)
+                    ZStack {
+                        ArtworkView(song: song, cornerRadius: 6, size: 48)
+
+                        if isHoveringThumbnail {
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color.black.opacity(0.35))
+                            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+                    }
+                    .frame(width: 48, height: 48)
+                    .contentShape(Rectangle())
+                    .onHover { isHoveringThumbnail = $0 }
+                    .onTapGesture {
+                        onExpand?()
+                    }
+                    .help("Click to expand Now Playing view")
 
                     VStack(alignment: .leading, spacing: 3) {
                         Text(song.title)
@@ -25,6 +50,11 @@ public struct NowPlayingBar: View {
                             .lineLimit(1)
                     }
                     .frame(maxWidth: 240, alignment: .leading)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        onExpand?()
+                    }
+                    .help("Click to expand Now Playing view")
 
                     if let url = song.location {
                         Button {

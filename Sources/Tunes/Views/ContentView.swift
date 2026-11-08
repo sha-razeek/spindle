@@ -13,6 +13,7 @@ public struct ContentView: View {
     @StateObject private var player = AudioPlayer.shared
 
     @State private var selectedItem: NavigationItem? = .songs
+    @State private var showExpandedNowPlaying: Bool = false
 
     public init() {}
 
@@ -89,7 +90,15 @@ public struct ContentView: View {
         } detail: {
             // MARK: - Main Content Area
             VStack(spacing: 0) {
-                if library.isLoading {
+                if showExpandedNowPlaying {
+                    ExpandedNowPlayingView(
+                        player: player,
+                        library: library,
+                        isPresented: $showExpandedNowPlaying
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                } else if library.isLoading {
                     VStack(spacing: 16) {
                         ProgressView()
                             .scaleEffect(1.2)
@@ -144,7 +153,11 @@ public struct ContentView: View {
                 }
 
                 // MARK: - Bottom Now Playing Bar
-                NowPlayingBar(player: player)
+                NowPlayingBar(player: player) {
+                    withAnimation(.spring(response: 0.38, dampingFraction: 0.78)) {
+                        showExpandedNowPlaying.toggle()
+                    }
+                }
             }
         }
         .searchable(text: $library.searchQuery, prompt: "Search songs, artists, albums...")
