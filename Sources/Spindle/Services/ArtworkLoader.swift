@@ -71,6 +71,8 @@ public final class ArtworkLoader: @unchecked Sendable {
     }
 
     public func loadArtwork(for song: Song) async -> NSImage? {
+        if Task.isCancelled { return nil }
+
         let key = song.id as NSString
         if let cached = cache.object(forKey: key) {
             return cached
@@ -88,6 +90,7 @@ public final class ArtworkLoader: @unchecked Sendable {
             }
             let newTask = Task.detached(priority: .userInitiated) { [weak self, itItem, location, songID] () -> NSImage? in
                 guard let self = self else { return nil }
+                if Task.isCancelled { return nil }
 
                 var loadedImage: NSImage? = nil
 
@@ -108,6 +111,7 @@ public final class ArtworkLoader: @unchecked Sendable {
                 }
 
                 guard let img = loadedImage else { return nil }
+                if Task.isCancelled { return nil }
 
                 let cacheKey = songID as NSString
                 self.cache.setObject(img, forKey: cacheKey)
@@ -131,17 +135,22 @@ public final class ArtworkLoader: @unchecked Sendable {
             _ = self.inFlightTasks.removeValue(forKey: songID)
         }
 
+        if Task.isCancelled { return nil }
         return result
     }
 
     private func createThumbnail(from data: Data, maxPixelSize: CGFloat = 500) -> NSImage? {
-        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
+        let sourceOptions: [CFString: Any] = [
+            kCGImageSourceShouldCache: false
+        ]
+        guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions as CFDictionary) else {
             return NSImage(data: data)
         }
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
             kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
-            kCGImageSourceCreateThumbnailWithTransform: true
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true
         ]
         guard let cgThumb = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
             return NSImage(data: data)
@@ -150,14 +159,18 @@ public final class ArtworkLoader: @unchecked Sendable {
     }
 
     private func downsample(image: NSImage, maxPixelSize: CGFloat = 500) -> NSImage {
-        guard let tiff = image.tiffRepresentation,
-              let source = CGImageSourceCreateWithData(tiff as CFData, nil) else {
+        guard let tiff = image.tiffRepresentation else { return image }
+        let sourceOptions: [CFString: Any] = [
+            kCGImageSourceShouldCache: false
+        ]
+        guard let source = CGImageSourceCreateWithData(tiff as CFData, sourceOptions as CFDictionary) else {
             return image
         }
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
             kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
-            kCGImageSourceCreateThumbnailWithTransform: true
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true
         ]
         guard let cgThumb = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
             return image

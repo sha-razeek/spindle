@@ -248,13 +248,8 @@ public struct AlbumSlabView: View, Equatable {
                 onSelectDetail()
             }
         }
-        .task(id: album.id) {
+        .task(id: "\(album.id)-\(isCurrentlyPlayingThisAlbum)") {
             await loadArtworkAndSpineColor()
-        }
-        .task(id: isCurrentlyPlayingThisAlbum) {
-            if isCurrentlyPlayingThisAlbum {
-                await loadArtworkAndSpineColor()
-            }
         }
     }
 
@@ -380,14 +375,21 @@ public struct AlbumSlabView: View, Equatable {
 
         guard let targetSong = song else { return }
 
-        // Fast in-memory cache check
+        // Fast in-memory cache check: 0ms delay if already cached
         if let cached = ArtworkLoader.shared.cachedImage(for: targetSong) {
             self.artworkImage = cached
             return
         }
 
+        // If not cached, debounce briefly for unpopped, non-playing slabs during fast scrubbing
+        if !isPoppedOut && !isCurrentlyPlayingThisAlbum {
+            try? await Task.sleep(nanoseconds: 90_000_000)
+            guard !Task.isCancelled else { return }
+        }
+
         // Asynchronous background load and palette derivation
         if let loaded = await ArtworkLoader.shared.loadArtwork(for: targetSong) {
+            guard !Task.isCancelled else { return }
             self.artworkImage = loaded
             let colors = ArtworkLoader.shared.spineColors(for: targetSong, fallbackID: album.id)
             self.spineBgColor = colors.bg

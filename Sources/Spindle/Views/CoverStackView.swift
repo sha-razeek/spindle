@@ -7,6 +7,152 @@ private struct ScrollOffsetKey: PreferenceKey {
     }
 }
 
+// MARK: - Isolated Backdrop View (Equatable to avoid re-rendering during scrubbing)
+private struct CoverBackdropView: View, Equatable {
+    let backdrop: BackdropPalette
+    let songID: String?
+
+    static func == (lhs: CoverBackdropView, rhs: CoverBackdropView) -> Bool {
+        lhs.songID == rhs.songID
+    }
+
+    var body: some View {
+        ZStack {
+            backdrop.bottom.ignoresSafeArea()
+
+            LinearGradient(
+                colors: [
+                    backdrop.top,
+                    backdrop.mid,
+                    backdrop.bottom
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+
+            // Atmospheric glowing radial spotlight radiating from upper-center
+            RadialGradient(
+                colors: [
+                    backdrop.primary.opacity(0.40),
+                    backdrop.mid.opacity(0.18),
+                    Color.clear
+                ],
+                center: .init(x: 0.5, y: 0.30),
+                startRadius: 70,
+                endRadius: 750
+            )
+            .ignoresSafeArea()
+
+            // Ambient glowing color aura for rich visual depth
+            Circle()
+                .fill(backdrop.primary.opacity(0.30))
+                .frame(width: 650, height: 650)
+                .offset(x: 100, y: -70)
+                .blur(radius: 120)
+                .allowsHitTesting(false)
+        }
+        .animation(.easeInOut(duration: 0.80), value: songID)
+        .allowsHitTesting(false)
+    }
+}
+
+// MARK: - Isolated Floating Header View (Equatable to prevent layout invalidation during scrub)
+private struct CoverFloatingHeaderView: View, Equatable {
+    let albumsCount: Int
+    let playingAlbum: Album?
+    let isPlaying: Bool
+    let isPoppedOut: Bool
+    let onJumpToPlaying: () -> Void
+
+    @State private var isHoveringNowPlaying: Bool = false
+
+    static func == (lhs: CoverFloatingHeaderView, rhs: CoverFloatingHeaderView) -> Bool {
+        lhs.albumsCount == rhs.albumsCount &&
+        lhs.playingAlbum?.id == rhs.playingAlbum?.id &&
+        lhs.isPlaying == rhs.isPlaying &&
+        lhs.isPoppedOut == rhs.isPoppedOut
+    }
+
+    var body: some View {
+        VStack {
+            HStack(spacing: 10) {
+                HStack(spacing: 6) {
+                    Image(systemName: "square.stack.3d.up.fill")
+                        .font(.system(size: 13))
+                    Text("VINYL DRAWER")
+                        .font(.system(size: 11, weight: .bold))
+                        .tracking(1)
+                    Text("• \(albumsCount) albums")
+                        .font(.system(size: 11))
+                        .foregroundColor(.white.opacity(0.7))
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule()
+                        .fill(.ultraThinMaterial)
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                        )
+                )
+                .foregroundColor(.white)
+
+                // Quick "Now Playing" jump button
+                if let album = playingAlbum {
+                    Button {
+                        onJumpToPlaying()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: isPlaying ? "speaker.wave.2.fill" : "play.fill")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(isPoppedOut ? .white : Color.accentColor)
+
+                            Text("NOW PLAYING")
+                                .font(.system(size: 10.5, weight: .bold))
+                                .tracking(0.6)
+
+                            Text("• \(album.title)")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(.white.opacity(0.85))
+                                .lineLimit(1)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule()
+                                .fill(isHoveringNowPlaying ? Color.white.opacity(0.20) : Color.clear)
+                                .background(Capsule().fill(.ultraThinMaterial))
+                                .overlay(
+                                    Capsule()
+                                        .stroke(isPoppedOut ? Color.white.opacity(0.40) : Color.white.opacity(0.18), lineWidth: 1)
+                                )
+                        )
+                        .foregroundColor(.white)
+                        .shadow(color: Color.black.opacity(0.25), radius: 6, x: 0, y: 2)
+                    }
+                    .buttonStyle(.plain)
+                    .onHover { h in
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            isHoveringNowPlaying = h
+                        }
+                    }
+                    .help("Jump back to now playing album: \(album.title)")
+                    .transition(.opacity.combined(with: .scale(scale: 0.94)))
+                }
+
+                Spacer()
+            }
+            .padding(.leading, 24)
+            .padding(.top, 16)
+
+            Spacer()
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: playingAlbum?.id)
+    }
+}
+
 public struct CoverStackView: View {
     let albums: [Album]
     @ObservedObject var player: AudioPlayer
@@ -34,9 +180,7 @@ public struct CoverStackView: View {
     @State private var scrubbingAlbum: Album? = nil
     @State private var lastScrolledAlbumID: String? = nil
     @State private var scrubTask: Task<Void, Never>? = nil
-
-    // Now Playing Header Button State
-    @State private var isHoveringNowPlaying: Bool = false
+    @State private var lastScrubTimestamp: CFTimeInterval = 0
 
     private var currentBackdrop: BackdropPalette {
         if let song = player.currentSong {
@@ -72,52 +216,18 @@ public struct CoverStackView: View {
             let backdrop = currentBackdrop
 
             ZStack {
-                // MARK: - Dynamic Playing Album Backdrop
-                ZStack {
-                    backdrop.bottom.ignoresSafeArea()
-
-                    LinearGradient(
-                        colors: [
-                            backdrop.top,
-                            backdrop.mid,
-                            backdrop.bottom
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .ignoresSafeArea()
-
-                    // Atmospheric glowing radial spotlight radiating from upper-center
-                    RadialGradient(
-                        colors: [
-                            backdrop.primary.opacity(0.40),
-                            backdrop.mid.opacity(0.18),
-                            Color.clear
-                        ],
-                        center: .init(x: 0.5, y: 0.30),
-                        startRadius: 70,
-                        endRadius: 750
-                    )
-                    .ignoresSafeArea()
-
-                    // Ambient glowing color aura for rich visual depth
-                    Circle()
-                        .fill(backdrop.primary.opacity(0.30))
-                        .frame(width: 650, height: 650)
-                        .offset(x: 100, y: -70)
-                        .blur(radius: 120)
-                        .allowsHitTesting(false)
-                }
-                .animation(.easeInOut(duration: 0.80), value: player.currentSong?.id)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    retractPoppedOutAlbum()
-                }
-                .task(id: player.currentSong?.id) {
-                    if let song = player.currentSong {
-                        _ = await ArtworkLoader.shared.loadArtwork(for: song)
+                // MARK: - Dynamic Playing Album Backdrop (Isolated & Equatable)
+                CoverBackdropView(backdrop: backdrop, songID: player.currentSong?.id)
+                    .equatable()
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        retractPoppedOutAlbum()
                     }
-                }
+                    .task(id: player.currentSong?.id) {
+                        if let song = player.currentSong {
+                            _ = await ArtworkLoader.shared.loadArtwork(for: song)
+                        }
+                    }
 
                 if albums.isEmpty {
                     VStack(spacing: 12) {
@@ -162,12 +272,19 @@ public struct CoverStackView: View {
                             .coordinateSpace(name: "CoverScrollSpace")
                             // Track scroll offset changes -> Real-time scrub fraction and manual scroll retraction
                             .onPreferenceChange(ScrollOffsetKey.self) { currentY in
-                                if !isScrubbing, albums.count > 1 {
+                                guard !isScrubbing else { return }
+
+                                if albums.count > 1 {
                                     let estimatedContentHeight = max(1.0, CGFloat(albums.count) * 96.0 - 250.0)
                                     let progress = min(max(0.0, -currentY / estimatedContentHeight), 1.0)
-                                    scrubFraction = progress
-                                    let index = min(max(0, Int(progress * CGFloat(albums.count - 1))), albums.count - 1)
-                                    activeLetter = initialLetter(for: albums[index].title)
+                                    if abs(progress - scrubFraction) > 0.003 {
+                                        scrubFraction = progress
+                                        let index = min(max(0, Int(progress * CGFloat(albums.count - 1))), albums.count - 1)
+                                        let letter = initialLetter(for: albums[index].title)
+                                        if letter != activeLetter {
+                                            activeLetter = letter
+                                        }
+                                    }
                                 }
 
                                 guard poppedOutAlbumID != nil else { return }
@@ -211,83 +328,17 @@ public struct CoverStackView: View {
                                     .padding(.trailing, 8)
                             }
 
-                            // MARK: - 4. Floating Header
-                            VStack {
-                                HStack(spacing: 10) {
-                                    HStack(spacing: 6) {
-                                        Image(systemName: "square.stack.3d.up.fill")
-                                            .font(.system(size: 13))
-                                        Text("VINYL DRAWER")
-                                            .font(.system(size: 11, weight: .bold))
-                                            .tracking(1)
-                                        Text("• \(albums.count) albums")
-                                            .font(.system(size: 11))
-                                            .foregroundColor(.white.opacity(0.7))
-                                    }
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(
-                                        Capsule()
-                                            .fill(.ultraThinMaterial)
-                                            .overlay(
-                                                Capsule()
-                                                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
-                                            )
-                                    )
-                                    .foregroundColor(.white)
-
-                                    // Quick "Now Playing" jump button
-                                    if let playingAlbum = currentlyPlayingAlbum {
-                                        let isFocused = (poppedOutAlbumID == playingAlbum.id)
-                                        Button {
-                                            scrollToPlayingAlbum(proxy: proxy, force: true)
-                                        } label: {
-                                            HStack(spacing: 6) {
-                                                Image(systemName: player.isPlaying ? "speaker.wave.2.fill" : "play.fill")
-                                                    .font(.system(size: 10, weight: .bold))
-                                                    .foregroundColor(isFocused ? .white : Color.accentColor)
-
-                                                Text("NOW PLAYING")
-                                                    .font(.system(size: 10.5, weight: .bold))
-                                                    .tracking(0.6)
-
-                                                Text("• \(playingAlbum.title)")
-                                                    .font(.system(size: 11, weight: .medium))
-                                                    .foregroundColor(.white.opacity(0.85))
-                                                    .lineLimit(1)
-                                            }
-                                            .padding(.horizontal, 12)
-                                            .padding(.vertical, 6)
-                                            .background(
-                                                Capsule()
-                                                    .fill(isHoveringNowPlaying ? Color.white.opacity(0.20) : Color.clear)
-                                                    .background(Capsule().fill(.ultraThinMaterial))
-                                                    .overlay(
-                                                        Capsule()
-                                                            .stroke(isFocused ? Color.white.opacity(0.40) : Color.white.opacity(0.18), lineWidth: 1)
-                                                    )
-                                            )
-                                            .foregroundColor(.white)
-                                            .shadow(color: Color.black.opacity(0.25), radius: 6, x: 0, y: 2)
-                                        }
-                                        .buttonStyle(.plain)
-                                        .onHover { h in
-                                            withAnimation(.easeInOut(duration: 0.15)) {
-                                                isHoveringNowPlaying = h
-                                            }
-                                        }
-                                        .help("Jump back to now playing album: \(playingAlbum.title)")
-                                        .transition(.opacity.combined(with: .scale(scale: 0.94)))
-                                    }
-
-                                    Spacer()
+                            // MARK: - 4. Floating Header (Isolated & Equatable)
+                            CoverFloatingHeaderView(
+                                albumsCount: albums.count,
+                                playingAlbum: currentlyPlayingAlbum,
+                                isPlaying: player.isPlaying,
+                                isPoppedOut: poppedOutAlbumID != nil && poppedOutAlbumID == currentlyPlayingAlbum?.id,
+                                onJumpToPlaying: {
+                                    scrollToPlayingAlbum(proxy: proxy, force: true)
                                 }
-                                .padding(.leading, 24)
-                                .padding(.top, 16)
-
-                                Spacer()
-                            }
-                            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: currentlyPlayingAlbum?.id)
+                            )
+                            .equatable()
 
                             // MARK: - 5. Center HUD Flash on Alphabet Jump
                             if showLetterHUD, let letter = hudLetter {
@@ -414,9 +465,7 @@ public struct CoverStackView: View {
                                 handleScrubUpdate(fraction: fraction, proxy: proxy)
                             }
                             .onEnded { _ in
-                                withAnimation(.easeOut(duration: 0.22)) {
-                                    isScrubbing = false
-                                }
+                                finishScrubbing(proxy: proxy)
                             }
                     )
                     .onHover { hovering in
@@ -563,20 +612,58 @@ public struct CoverStackView: View {
         let index = min(max(0, Int(fraction * CGFloat(albums.count - 1))), albums.count - 1)
         let album = albums[index]
 
+        // Fast zero-latency UI updates (pill position, callout HUD preview card)
         scrubFraction = fraction
         scrubbingAlbum = album
-        activeLetter = initialLetter(for: album.title)
 
-        if lastScrolledAlbumID != album.id {
-            lastScrolledAlbumID = album.id
-            isProgrammaticScroll = true
+        let letter = initialLetter(for: album.title)
+        if letter != activeLetter {
+            activeLetter = letter
+        }
 
+        // Paced programmatic scroll: caps ScrollView viewport relocation to ~30fps
+        let now = CACurrentMediaTime()
+        let elapsed = now - lastScrubTimestamp
+
+        if elapsed >= 0.032 {
+            lastScrubTimestamp = now
+            if lastScrolledAlbumID != album.id {
+                lastScrolledAlbumID = album.id
+                isProgrammaticScroll = true
+                proxy.scrollTo(album.id, anchor: .center)
+            }
+        } else {
+            // Trailing update ensures perfect precision when pausing or slowing down
             scrubTask?.cancel()
             scrubTask = Task { @MainActor in
-                proxy.scrollTo(album.id, anchor: .center)
-                try? await Task.sleep(nanoseconds: 70_000_000)
-                isProgrammaticScroll = false
+                try? await Task.sleep(nanoseconds: 35_000_000)
+                guard !Task.isCancelled else { return }
+                lastScrubTimestamp = CACurrentMediaTime()
+                if lastScrolledAlbumID != album.id {
+                    lastScrolledAlbumID = album.id
+                    isProgrammaticScroll = true
+                    proxy.scrollTo(album.id, anchor: .center)
+                }
             }
+        }
+    }
+
+    private func finishScrubbing(proxy: ScrollViewProxy) {
+        scrubTask?.cancel()
+        if let targetAlbum = scrubbingAlbum {
+            lastScrolledAlbumID = targetAlbum.id
+            isProgrammaticScroll = true
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                proxy.scrollTo(targetAlbum.id, anchor: .center)
+            }
+        }
+        withAnimation(.easeOut(duration: 0.20)) {
+            isScrubbing = false
+        }
+        programmaticScrollTask?.cancel()
+        programmaticScrollTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            isProgrammaticScroll = false
         }
     }
 
