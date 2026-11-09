@@ -47,6 +47,13 @@ struct SpindleApp: App {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApplication.shared.setActivationPolicy(.regular)
+        DispatchQueue.main.async {
+            for window in NSApplication.shared.windows {
+                window.titlebarAppearsTransparent = true
+                window.toolbar?.showsBaselineSeparator = false
+                window.styleMask.insert(.fullSizeContentView)
+            }
+        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

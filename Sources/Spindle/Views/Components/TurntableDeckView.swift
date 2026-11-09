@@ -114,8 +114,8 @@ public struct TurntableDeckView: View {
                     .frame(width: deckFrameWidth, height: sleeveSize, alignment: .leading)
                     .transition(.opacity.combined(with: .scale(scale: 0.94)))
 
-                    // MARK: - Album Details (Clean typography centered directly beneath album sleeve)
-                    VStack(spacing: detailSpacing) {
+                    // MARK: - Album Details (Left-aligned directly beneath album sleeve)
+                    VStack(alignment: .leading, spacing: detailSpacing) {
                         HStack(spacing: 6) {
                             if isPlaying {
                                 Image(systemName: "speaker.wave.2.fill")
@@ -150,7 +150,7 @@ public struct TurntableDeckView: View {
                         .font(.system(size: metaSize))
                         .foregroundColor(.white.opacity(0.60))
                     }
-                    .frame(width: sleeveSize)
+                    .frame(width: sleeveSize, alignment: .leading)
                     .transition(.opacity.combined(with: .scale(scale: 0.96)))
                 } else {
                     // MARK: - Empty Turntable Deck (When a song/LP isn't selected)
@@ -347,11 +347,11 @@ public struct TurntableDeckView: View {
             }
             .frame(width: size + discSlideOffset + 120, height: size, alignment: .leading)
 
-            // Welcoming subtitle centered beneath the deck
+            // Welcoming subtitle directly beneath the deck (left-aligned)
             let readyIconSize = max(15.0, min(20.0, size * 0.022))
             let readyTitleSize = max(12.0, min(16.0, size * 0.018))
             let readySubSize = max(13.0, min(16.5, size * 0.019))
-            VStack(spacing: max(6.0, min(9.0, size * 0.010))) {
+            VStack(alignment: .leading, spacing: max(6.0, min(9.0, size * 0.010))) {
                 HStack(spacing: 7) {
                     Image(systemName: "record.circle")
                         .font(.system(size: readyIconSize, weight: .semibold))
@@ -366,7 +366,7 @@ public struct TurntableDeckView: View {
                     .font(.system(size: readySubSize))
                     .foregroundColor(.white.opacity(0.60))
             }
-            .frame(width: size)
+            .frame(width: size, alignment: .leading)
         }
     }
 

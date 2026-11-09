@@ -7,6 +7,7 @@ public struct ExpandedNowPlayingView: View {
     @Binding var isPresented: Bool
 
     @State private var animateGradients: Bool = false
+    @State private var isHoveringArtwork: Bool = false
 
     private var currentSong: Song? {
         player.currentSong
@@ -161,13 +162,49 @@ public struct ExpandedNowPlayingView: View {
                         HStack(alignment: .top, spacing: 48) {
                             // MARK: - Left: Large Artwork & Scrubber
                             VStack(alignment: .leading, spacing: 20) {
-                                // Large Album Art inside Rounded Rectangle Mask
-                                ArtworkView(song: song, cornerRadius: 20, size: 360)
-                                    .shadow(color: Color.black.opacity(0.65), radius: 36, x: 0, y: 20)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                            .stroke(Color.white.opacity(0.18), lineWidth: 1.5)
-                                    )
+                                // Large Album Art inside Rounded Rectangle Mask with Hover Play/Pause
+                                ZStack {
+                                    ArtworkView(song: song, cornerRadius: 20, size: 360)
+                                        .shadow(color: Color.black.opacity(0.65), radius: 36, x: 0, y: 20)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                                .stroke(Color.white.opacity(0.18), lineWidth: 1.5)
+                                        )
+
+                                    if isHoveringArtwork {
+                                        ZStack {
+                                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                                .fill(Color.black.opacity(0.35))
+
+                                            ZStack {
+                                                Circle()
+                                                    .fill(.ultraThinMaterial)
+                                                    .frame(width: 72, height: 72)
+                                                    .overlay(
+                                                        Circle().stroke(Color.white.opacity(0.30), lineWidth: 1.2)
+                                                    )
+                                                    .shadow(color: Color.black.opacity(0.40), radius: 16, x: 0, y: 4)
+
+                                                Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
+                                                    .font(.system(size: 28, weight: .bold))
+                                                    .foregroundColor(.white)
+                                                    .offset(x: player.isPlaying ? 0 : 2)
+                                            }
+                                        }
+                                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                                    }
+                                }
+                                .frame(width: 360, height: 360)
+                                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                                .contentShape(Rectangle())
+                                .onHover { hovering in
+                                    withAnimation(.easeInOut(duration: 0.18)) {
+                                        isHoveringArtwork = hovering
+                                    }
+                                }
+                                .onTapGesture {
+                                    player.togglePlayPause()
+                                }
 
                                 // Track Information (Left aligned)
                                 VStack(alignment: .leading, spacing: 6) {
