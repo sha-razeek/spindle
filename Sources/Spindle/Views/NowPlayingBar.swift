@@ -10,7 +10,6 @@ public struct NowPlayingBar: View {
     @State private var showQueuePopover: Bool = false
     @State private var isHoveringThumbnail: Bool = false
     @State private var isHoveringScrubber: Bool = false
-    @State private var showLyrics: Bool = false
 
     // Volume control expansion state (matching Apple Music Image 1 vs Image 2)
     @State private var isHoveringVolume: Bool = false
@@ -226,6 +225,7 @@ public struct NowPlayingBar: View {
                         .contentShape(Circle())
                 }
                 .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
                 .frame(width: 22, height: 22)
                 .help("More Options")
 
@@ -294,21 +294,8 @@ public struct NowPlayingBar: View {
                         isHoveringVolume = hovering
                     }
                 } else {
-                    // MARK: - Idle Icons: Lyrics, Queue & Speaker Icon (Image 2)
+                    // MARK: - Idle Icons: Queue & Speaker Icon (Image 2)
                     HStack(spacing: 8) {
-                        // Lyrics button
-                        Button {
-                            showLyrics.toggle()
-                            onExpand?()
-                        } label: {
-                            Image(systemName: "quote.bubble")
-                                .font(.system(size: 12.5, weight: .medium))
-                                .foregroundColor(showLyrics ? .accentColor : .secondary)
-                                .frame(width: 20, height: 20)
-                        }
-                        .buttonStyle(.plain)
-                        .help("Lyrics")
-
                         // Up Next Queue button
                         Button {
                             showQueuePopover.toggle()
@@ -346,7 +333,7 @@ public struct NowPlayingBar: View {
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
                 }
             }
-            .frame(width: isVolumeExpanded ? 140 : 120, alignment: .trailing)
+            .frame(width: isVolumeExpanded ? 140 : 85, alignment: .trailing)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 4)
