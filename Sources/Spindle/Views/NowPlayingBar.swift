@@ -9,6 +9,8 @@ public struct NowPlayingBar: View {
     @State private var scrubTime: TimeInterval = 0
     @State private var showQueuePopover: Bool = false
     @State private var isHoveringThumbnail: Bool = false
+    @State private var isHoveringScrubber: Bool = false
+    @State private var showLyrics: Bool = false
 
     public init(player: AudioPlayer, onExpand: (() -> Void)? = nil) {
         self.player = player
@@ -16,22 +18,94 @@ public struct NowPlayingBar: View {
     }
 
     public var body: some View {
-        HStack(spacing: 16) {
-            // MARK: - Left: Track Info & Artwork
+        HStack(spacing: 20) {
+            // MARK: - Left: Transport Controls (Matches Apple Music layout in reference image 3)
+            HStack(spacing: 16) {
+                // Shuffle
+                Button {
+                    player.isShuffleEnabled.toggle()
+                } label: {
+                    Image(systemName: "shuffle")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(player.isShuffleEnabled ? .accentColor : .secondary)
+                }
+                .buttonStyle(.plain)
+                .help(player.isShuffleEnabled ? "Shuffle On" : "Shuffle Off")
+
+                // Previous Track
+                Button {
+                    player.previousTrack()
+                } label: {
+                    Image(systemName: "backward.fill")
+                        .font(.system(size: 15))
+                        .foregroundColor(.primary.opacity(0.85))
+                }
+                .buttonStyle(.plain)
+                .disabled(!player.hasPrevious)
+                .help("Previous Track")
+
+                // Play / Pause
+                Button {
+                    player.togglePlayPause()
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(Color.primary.opacity(0.12))
+                            .frame(width: 36, height: 36)
+                        Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.primary)
+                            .offset(x: player.isPlaying ? 0 : 1.2)
+                    }
+                }
+                .buttonStyle(.plain)
+                .keyboardShortcut(.space, modifiers: [])
+                .help(player.isPlaying ? "Pause" : "Play")
+
+                // Next Track
+                Button {
+                    player.nextTrack()
+                } label: {
+                    Image(systemName: "forward.fill")
+                        .font(.system(size: 15))
+                        .foregroundColor(.primary.opacity(0.85))
+                }
+                .buttonStyle(.plain)
+                .disabled(!player.hasNext)
+                .help("Next Track")
+
+                // Repeat Mode
+                Button {
+                    player.cycleRepeatMode()
+                } label: {
+                    Image(systemName: player.repeatMode.iconName)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(player.repeatMode != .off ? .accentColor : .secondary)
+                }
+                .buttonStyle(.plain)
+                .help(player.repeatMode.rawValue)
+            }
+            .frame(width: 175, alignment: .leading)
+
+            Spacer(minLength: 8)
+
+            // MARK: - Center: Track Info Thumbnail & Live Scrubber
             HStack(spacing: 12) {
                 if let song = player.currentSong {
+                    // Artwork Thumbnail
                     ZStack {
-                        ArtworkView(song: song, cornerRadius: 6, size: 48)
+                        ArtworkView(song: song, cornerRadius: 5, size: 38)
+                            .shadow(color: Color.black.opacity(0.20), radius: 4, x: 0, y: 2)
 
                         if isHoveringThumbnail {
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(Color.black.opacity(0.35))
+                            RoundedRectangle(cornerRadius: 5)
+                                .fill(Color.black.opacity(0.40))
                             Image(systemName: "arrow.up.left.and.arrow.down.right")
-                                .font(.system(size: 13, weight: .bold))
+                                .font(.system(size: 11, weight: .bold))
                                 .foregroundColor(.white)
                         }
                     }
-                    .frame(width: 48, height: 48)
+                    .frame(width: 38, height: 38)
                     .contentShape(Rectangle())
                     .onHover { isHoveringThumbnail = $0 }
                     .onTapGesture {
@@ -40,188 +114,114 @@ public struct NowPlayingBar: View {
                     .help("Click to expand Now Playing view")
 
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(song.title)
-                            .font(.system(size: 13, weight: .semibold))
-                            .lineLimit(1)
+                        // Title & Artist
+                        HStack(spacing: 6) {
+                            Text(song.title)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.primary)
+                                .lineLimit(1)
 
-                        Text("\(song.artistName) — \(song.albumTitle)")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                    }
-                    .frame(maxWidth: 240, alignment: .leading)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        onExpand?()
-                    }
-                    .help("Click to expand Now Playing view")
+                            Text("•")
+                                .font(.system(size: 9))
+                                .foregroundColor(.secondary.opacity(0.6))
 
-                    if let url = song.location {
-                        Button {
-                            NSWorkspace.shared.activateFileViewerSelecting([url])
-                        } label: {
-                            Image(systemName: "folder")
-                                .font(.system(size: 11))
+                            Text(song.artistName)
+                                .font(.system(size: 11.5))
                                 .foregroundColor(.secondary)
+                                .lineLimit(1)
                         }
-                        .buttonStyle(.plain)
-                        .help("Show in Finder (local file)")
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            onExpand?()
+                        }
+
+                        // Sleek Scrubber Bar
+                        HStack(spacing: 8) {
+                            Text(isDraggingScrubber ? formatSeconds(scrubTime) : player.formattedCurrentTime)
+                                .font(.system(size: 9.5, design: .monospaced))
+                                .foregroundColor(.secondary)
+                                .frame(width: 32, alignment: .trailing)
+
+                            // Scrubber Slider
+                            Slider(
+                                value: Binding(
+                                    get: { isDraggingScrubber ? scrubTime : player.currentTime },
+                                    set: { newValue in
+                                        scrubTime = newValue
+                                    }
+                                ),
+                                in: 0...max(1.0, player.duration),
+                                onEditingChanged: { editing in
+                                    isDraggingScrubber = editing
+                                    if !editing {
+                                        player.seek(to: scrubTime)
+                                    } else {
+                                        scrubTime = player.currentTime
+                                    }
+                                }
+                            )
+                            .accentColor(.accentColor)
+                            .frame(maxWidth: 320)
+                            .onHover { h in isHoveringScrubber = h }
+
+                            Text(player.formattedRemainingTime)
+                                .font(.system(size: 9.5, design: .monospaced))
+                                .foregroundColor(.secondary)
+                                .frame(width: 36, alignment: .leading)
+                        }
                     }
                 } else {
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(Color.secondary.opacity(0.15))
-                        .frame(width: 48, height: 48)
-                        .overlay(
-                            Image(systemName: "music.note")
+                    // Empty / Not Playing state
+                    HStack(spacing: 10) {
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .fill(Color.secondary.opacity(0.12))
+                            .frame(width: 38, height: 38)
+                            .overlay(
+                                Image(systemName: "music.note")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.secondary.opacity(0.7))
+                            )
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Not Playing")
+                                .font(.system(size: 12, weight: .semibold))
                                 .foregroundColor(.secondary)
-                        )
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Not Playing")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.secondary)
-                        Text("Select a song to start listening")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary.opacity(0.8))
-                    }
-                    .frame(maxWidth: 240, alignment: .leading)
-                }
-            }
-            .frame(width: 320, alignment: .leading)
-
-            Spacer()
-
-            // MARK: - Center: Transport Controls & Scrubber
-            VStack(spacing: 6) {
-                // Controls Row
-                HStack(spacing: 18) {
-                    // Shuffle
-                    Button {
-                        player.isShuffleEnabled.toggle()
-                    } label: {
-                        Image(systemName: "shuffle")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(player.isShuffleEnabled ? .accentColor : .secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .help(player.isShuffleEnabled ? "Shuffle On" : "Shuffle Off")
-
-                    // Previous
-                    Button {
-                        player.previousTrack()
-                    } label: {
-                        Image(systemName: "backward.fill")
-                            .font(.system(size: 15))
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(!player.hasPrevious)
-                    .help("Previous Track")
-
-                    // Play / Pause
-                    Button {
-                        player.togglePlayPause()
-                    } label: {
-                        ZStack {
-                            Circle()
-                                .fill(Color.accentColor)
-                                .frame(width: 34, height: 34)
-                            Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                                .font(.system(size: 15, weight: .bold))
-                                .foregroundColor(.white)
-                                .offset(x: player.isPlaying ? 0 : 1)
+                            Text("Select an album or track to start listening")
+                                .font(.system(size: 10.5))
+                                .foregroundColor(.secondary.opacity(0.7))
                         }
                     }
-                    .buttonStyle(.plain)
-                    .keyboardShortcut(.space, modifiers: [])
-                    .help(player.isPlaying ? "Pause" : "Play")
-
-                    // Next
-                    Button {
-                        player.nextTrack()
-                    } label: {
-                        Image(systemName: "forward.fill")
-                            .font(.system(size: 15))
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(!player.hasNext)
-                    .help("Next Track")
-
-                    // Repeat
-                    Button {
-                        player.cycleRepeatMode()
-                    } label: {
-                        Image(systemName: player.repeatMode.iconName)
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(player.repeatMode != .off ? .accentColor : .secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .help(player.repeatMode.rawValue)
-                }
-
-                // Scrubber Row
-                HStack(spacing: 8) {
-                    Text(isDraggingScrubber ? formatSeconds(scrubTime) : player.formattedCurrentTime)
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
-                        .frame(width: 36, alignment: .trailing)
-
-                    Slider(
-                        value: Binding(
-                            get: { isDraggingScrubber ? scrubTime : player.currentTime },
-                            set: { newValue in
-                                scrubTime = newValue
-                            }
-                        ),
-                        in: 0...max(1.0, player.duration),
-                        onEditingChanged: { editing in
-                            isDraggingScrubber = editing
-                            if !editing {
-                                player.seek(to: scrubTime)
-                            } else {
-                                scrubTime = player.currentTime
-                            }
-                        }
-                    )
-                    .accentColor(.accentColor)
-                    .frame(maxWidth: 380)
-
-                    Text(player.formattedRemainingTime)
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
-                        .frame(width: 42, alignment: .leading)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .center)
 
-            Spacer()
+            Spacer(minLength: 8)
 
-            // MARK: - Right: Volume & Queue
-            HStack(spacing: 12) {
-                // Volume
+            // MARK: - Right: Lyrics, Queue, AirPlay & Volume (Matches reference image 3)
+            HStack(spacing: 14) {
+                // Lyrics button
                 Button {
-                    player.isMuted.toggle()
+                    showLyrics.toggle()
+                    onExpand?()
                 } label: {
-                    Image(systemName: volumeIcon)
-                        .font(.system(size: 13))
-                        .foregroundColor(.secondary)
-                        .frame(width: 18)
+                    Image(systemName: "quote.bubble")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(showLyrics ? .accentColor : .secondary)
                 }
                 .buttonStyle(.plain)
+                .help("Lyrics")
 
-                Slider(value: $player.volume, in: 0...1)
-                    .frame(width: 80)
-                    .accentColor(.accentColor)
-
-                // Queue button
+                // Up Next Queue button
                 Button {
                     showQueuePopover.toggle()
                 } label: {
                     Image(systemName: "list.bullet")
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.system(size: 13.5, weight: .medium))
                         .foregroundColor(showQueuePopover ? .accentColor : .secondary)
-                        .padding(6)
+                        .padding(5)
                         .background(
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(showQueuePopover ? Color.accentColor.opacity(0.15) : Color.clear)
+                            Circle()
+                                .fill(showQueuePopover ? Color.accentColor.opacity(0.18) : Color.clear)
                         )
                 }
                 .buttonStyle(.plain)
@@ -229,21 +229,81 @@ public struct NowPlayingBar: View {
                 .popover(isPresented: $showQueuePopover, arrowEdge: .top) {
                     QueuePopoverView(player: player)
                 }
+
+                // AirPlay route selector button
+                Button {
+                    showAirPlayPicker()
+                } label: {
+                    Image(systemName: "airplayaudio")
+                        .font(.system(size: 13.5, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("AirPlay & Audio Devices")
+
+                // Volume icon + slider
+                HStack(spacing: 6) {
+                    Button {
+                        player.isMuted.toggle()
+                    } label: {
+                        Image(systemName: volumeIcon)
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                            .frame(width: 16)
+                    }
+                    .buttonStyle(.plain)
+                    .help(player.isMuted ? "Unmute" : "Mute")
+
+                    Slider(value: $player.volume, in: 0...1)
+                        .frame(width: 74)
+                        .accentColor(.accentColor)
+                }
             }
-            .frame(width: 220, alignment: .trailing)
+            .frame(width: 215, alignment: .trailing)
         }
-        .padding(.horizontal, 18)
+        .padding(.horizontal, 20)
         .padding(.vertical, 10)
+        .frame(height: 62)
+        // MARK: - Apple Liquid Glass Panel Styling (Frosted glass capsule, specular sheen, drop shadow)
         .background(
-            Rectangle()
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    Rectangle()
-                        .frame(height: 1)
-                        .foregroundColor(Color(NSColor.separatorColor)),
-                    alignment: .top
-                )
+            ZStack {
+                // 1. Frosted ultra thin material blurring content behind
+                Capsule()
+                    .fill(.ultraThinMaterial)
+
+                // 2. Liquid glass specular light gradient
+                Capsule()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.24),
+                                Color.white.opacity(0.08),
+                                Color.white.opacity(0.15)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+
+                // 3. Crisp specular glass perimeter highlight stroke
+                Capsule()
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.55),
+                                Color.white.opacity(0.18),
+                                Color.white.opacity(0.35)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1.0
+                    )
+            }
         )
+        // Ambient glass elevation shadow
+        .shadow(color: Color.black.opacity(0.28), radius: 22, x: 0, y: 8)
+        .shadow(color: Color.black.opacity(0.10), radius: 5, x: 0, y: 2)
     }
 
     private var volumeIcon: String {
@@ -263,5 +323,12 @@ public struct NowPlayingBar: View {
         let m = total / 60
         let s = total % 60
         return String(format: "%d:%02d", m, s)
+    }
+
+    private func showAirPlayPicker() {
+        // Open macOS Sound Output selector in System Settings
+        if let url = URL(string: "x-apple.systempreferences:com.apple.Sound-Settings.extension") {
+            NSWorkspace.shared.open(url)
+        }
     }
 }

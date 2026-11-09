@@ -147,6 +147,9 @@ public struct ArtistsView: View {
                                 }
                                 .padding(.bottom, 16)
                             }
+
+                            // Bottom clearance for floating liquid glass panel
+                            Color.clear.frame(height: 84)
                         }
                         .padding(20)
                     }

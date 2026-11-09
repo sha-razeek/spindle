@@ -29,6 +29,11 @@ if [ -f "Resources/AppIcon.icns" ]; then
     cp "Resources/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
 fi
 
+# Copy Tonearm Asset
+if [ -f "Resources/tonearm.png" ]; then
+    cp "Resources/tonearm.png" "$RESOURCES_DIR/tonearm.png"
+fi
+
 # Code sign ad-hoc
 echo "==> Code signing application bundle..."
 codesign --force --deep -s - "$APP_DIR"

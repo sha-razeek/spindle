@@ -105,6 +105,9 @@ public struct AlbumsGridView: View {
                                     selectedAlbum = album
                                 }
                             }
+
+                            // Bottom clearance for floating liquid glass panel
+                            Color.clear.frame(height: 84)
                         }
                         .padding(24)
                     }

@@ -68,14 +68,15 @@ public struct TurntableDeckView: View {
                             .onTapGesture { onTogglePlay() }
 
                         // 3. Precision Audiophile Tonearm (Placed away from disc, moves to disc when playing)
-                        let tScale = tonearmScale / 340.0
+                        let tHeight = sleeveSize * 0.90
+                        let tWidth = tHeight * (178.0 / 759.0)
                         TonearmView(
                             isPlaying: isPlaying,
-                            size: tonearmScale
+                            size: tHeight
                         )
                         .offset(
-                            x: discSlideOffset + sleeveSize * 0.86 - 65 * tScale,
-                            y: sleeveSize * 0.08 - 62 * tScale
+                            x: discSlideOffset + sleeveSize * 0.86 - tWidth * 0.3764,
+                            y: sleeveSize * 0.08 - tHeight * 0.2200
                         )
                         .allowsHitTesting(false)
                     }
@@ -301,14 +302,15 @@ public struct TurntableDeckView: View {
                 .frame(width: size, height: size)
 
                 // Tonearm resting away on its armrest post outside the platter
-                let tScale = tonearmScale / 340.0
+                let tHeight = size * 0.90
+                let tWidth = tHeight * (178.0 / 759.0)
                 TonearmView(
                     isPlaying: false,
-                    size: tonearmScale
+                    size: tHeight
                 )
                 .offset(
-                    x: size * 0.86 - 65 * tScale,
-                    y: size * 0.08 - 62 * tScale
+                    x: size * 0.86 - tWidth * 0.3764,
+                    y: size * 0.08 - tHeight * 0.2200
                 )
                 .allowsHitTesting(false)
             }

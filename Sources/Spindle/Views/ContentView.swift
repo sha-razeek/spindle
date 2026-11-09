@@ -132,32 +132,37 @@ public struct ContentView: View {
                     .padding(32)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    // Content switcher
-                    Group {
-                        switch selectedItem {
-                        case .recentlyAdded:
-                            RecentlyAddedView(
-                                albums: library.recentlyAddedAlbums,
-                                songs: library.recentlyAddedSongs,
-                                player: player
-                            )
-                        case .songs, .none:
-                            SongsListView(songs: library.songs, player: player)
-                        case .albums:
-                            AlbumsGridView(albums: library.albums, player: player)
-                        case .coverStack:
-                            CoverStackView(albums: library.albums, player: player)
-                        case .artists:
-                            ArtistsView(artists: library.artists, player: player)
+                    // MARK: - Main Content Area with Floating Liquid Glass Bar
+                    ZStack(alignment: .bottom) {
+                        // Content switcher
+                        Group {
+                            switch selectedItem {
+                            case .recentlyAdded:
+                                RecentlyAddedView(
+                                    albums: library.recentlyAddedAlbums,
+                                    songs: library.recentlyAddedSongs,
+                                    player: player
+                                )
+                            case .songs, .none:
+                                SongsListView(songs: library.songs, player: player)
+                            case .albums:
+                                AlbumsGridView(albums: library.albums, player: player)
+                            case .coverStack:
+                                CoverStackView(albums: library.albums, player: player)
+                            case .artists:
+                                ArtistsView(artists: library.artists, player: player)
+                            }
                         }
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                // MARK: - Bottom Now Playing Bar
-                NowPlayingBar(player: player) {
-                    withAnimation(.spring(response: 0.38, dampingFraction: 0.78)) {
-                        showExpandedNowPlaying.toggle()
+                        // MARK: - Apple Liquid Glass Floating Now Playing Panel
+                        NowPlayingBar(player: player) {
+                            withAnimation(.spring(response: 0.38, dampingFraction: 0.78)) {
+                                showExpandedNowPlaying.toggle()
+                            }
+                        }
+                        .padding(.horizontal, 28)
+                        .padding(.bottom, 16)
                     }
                 }
             }

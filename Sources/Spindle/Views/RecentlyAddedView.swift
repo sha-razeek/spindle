@@ -152,6 +152,9 @@ public struct RecentlyAddedView: View {
                                 selectedAlbum = album
                             }
                         }
+
+                        // Bottom clearance for floating liquid glass panel
+                        Color.clear.frame(height: 84)
                     }
                     .padding(24)
                 }
@@ -308,6 +311,9 @@ public struct RecentlyAddedView: View {
                                 }
                             }
                         }
+
+                        // Bottom clearance for floating liquid glass panel
+                        Color.clear.frame(height: 84)
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)

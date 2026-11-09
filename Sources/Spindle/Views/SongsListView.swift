@@ -194,6 +194,9 @@ public struct SongsListView: View {
                                 }
                             }
                         }
+
+                        // Bottom clearance for floating liquid glass panel
+                        Color.clear.frame(height: 84)
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)
