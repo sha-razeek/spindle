@@ -32,6 +32,21 @@ public struct Song: Identifiable, Hashable, Sendable {
         return String(format: "%d:%02d", minutes, seconds)
     }
 
+    public var relativeDateAdded: String? {
+        guard let date = dateAdded else { return nil }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
+
+    public var formattedDateAdded: String? {
+        guard let date = dateAdded else { return nil }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
+    }
+
     public init(from item: ITLibMediaItem) {
         let pid = item.persistentID.uint64Value
         self.persistentID = pid

@@ -1,18 +1,18 @@
 import SwiftUI
 
 public enum NavigationItem: Hashable {
+    case recentlyAdded
     case songs
     case albums
     case coverStack
     case artists
-    case playlist(String)
 }
 
 public struct ContentView: View {
     @StateObject private var library = LibraryManager()
     @StateObject private var player = AudioPlayer.shared
 
-    @State private var selectedItem: NavigationItem? = .songs
+    @State private var selectedItem: NavigationItem? = .recentlyAdded
     @State private var showExpandedNowPlaying: Bool = false
 
     public init() {}
@@ -22,6 +22,10 @@ public struct ContentView: View {
             // MARK: - Sidebar
             List(selection: $selectedItem) {
                 Section("Library") {
+                    Label("Recently Added", systemImage: "clock")
+                        .badge(library.recentlyAddedAlbums.count)
+                        .tag(NavigationItem.recentlyAdded)
+
                     Label("Songs", systemImage: "music.note")
                         .badge(library.songs.count)
                         .tag(NavigationItem.songs)
@@ -37,16 +41,6 @@ public struct ContentView: View {
                     Label("Artists", systemImage: "music.mic")
                         .badge(library.artists.count)
                         .tag(NavigationItem.artists)
-                }
-
-                if !library.playlists.isEmpty {
-                    Section("Playlists") {
-                        ForEach(library.playlists) { playlist in
-                            Label(playlist.name, systemImage: "music.note.list")
-                                .badge(playlist.songCount)
-                                .tag(NavigationItem.playlist(playlist.id))
-                        }
-                    }
                 }
             }
             .listStyle(.sidebar)
@@ -141,6 +135,12 @@ public struct ContentView: View {
                     // Content switcher
                     Group {
                         switch selectedItem {
+                        case .recentlyAdded:
+                            RecentlyAddedView(
+                                albums: library.recentlyAddedAlbums,
+                                songs: library.recentlyAddedSongs,
+                                player: player
+                            )
                         case .songs, .none:
                             SongsListView(songs: library.songs, player: player)
                         case .albums:
@@ -149,13 +149,6 @@ public struct ContentView: View {
                             CoverStackView(albums: library.albums, player: player)
                         case .artists:
                             ArtistsView(artists: library.artists, player: player)
-                        case .playlist(let id):
-                            if let playlist = library.playlists.first(where: { $0.id == id }) {
-                                PlaylistDetailView(playlist: playlist, player: player)
-                            } else {
-                                Text("Playlist not found")
-                                    .foregroundColor(.secondary)
-                            }
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)

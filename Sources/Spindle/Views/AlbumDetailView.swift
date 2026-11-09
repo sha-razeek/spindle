@@ -3,9 +3,22 @@ import SwiftUI
 public struct AlbumDetailView: View {
     let album: Album
     @ObservedObject var player: AudioPlayer
+    var backTitle: String
     var onBack: (() -> Void)?
 
     @State private var hoveredSongID: String?
+
+    public init(
+        album: Album,
+        player: AudioPlayer,
+        backTitle: String = "Albums",
+        onBack: (() -> Void)? = nil
+    ) {
+        self.album = album
+        self.player = player
+        self.backTitle = backTitle
+        self.onBack = onBack
+    }
 
     public var body: some View {
         ScrollView {
@@ -17,7 +30,7 @@ public struct AlbumDetailView: View {
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "chevron.left")
-                            Text("Albums")
+                            Text(backTitle)
                         }
                         .foregroundColor(.accentColor)
                     }

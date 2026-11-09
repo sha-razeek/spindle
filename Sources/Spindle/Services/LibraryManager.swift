@@ -9,6 +9,8 @@ public final class LibraryManager: ObservableObject {
     @Published public private(set) var albums: [Album] = []
     @Published public private(set) var artists: [Artist] = []
     @Published public private(set) var playlists: [Playlist] = []
+    @Published public private(set) var recentlyAddedAlbums: [Album] = []
+    @Published public private(set) var recentlyAddedSongs: [Song] = []
 
     @Published public var searchQuery: String = ""
     @Published public var showOnlyLocalSongs: Bool = true
@@ -58,20 +60,6 @@ public final class LibraryManager: ObservableObject {
 
             self.rebuildCollections()
 
-            // Resolve Playlists
-            let songDict = Dictionary(uniqueKeysWithValues: parsedSongs.map { ($0.persistentID, $0) })
-            var parsedPlaylists: [Playlist] = []
-            for itPlaylist in lib.allPlaylists {
-                // Ignore master root playlist or empty smart lists
-                if !itPlaylist.isMaster && !itPlaylist.items.isEmpty {
-                    let playlist = Playlist(from: itPlaylist, songLookup: songDict)
-                    if !playlist.songs.isEmpty {
-                        parsedPlaylists.append(playlist)
-                    }
-                }
-            }
-            self.playlists = parsedPlaylists.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-
             self.isLoading = false
         } catch {
             self.isLoading = false
@@ -116,6 +104,26 @@ public final class LibraryManager: ObservableObject {
             }
         }
         self.albums = albumList.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+
+        // Recently Added Albums (sorted by dateAdded descending)
+        self.recentlyAddedAlbums = albumList.sorted { a1, a2 in
+            let d1 = a1.dateAdded ?? .distantPast
+            let d2 = a2.dateAdded ?? .distantPast
+            if d1 != d2 {
+                return d1 > d2
+            }
+            return a1.title.localizedCaseInsensitiveCompare(a2.title) == .orderedAscending
+        }
+
+        // Recently Added Songs (sorted by dateAdded descending)
+        self.recentlyAddedSongs = filtered.sorted { s1, s2 in
+            let d1 = s1.dateAdded ?? .distantPast
+            let d2 = s2.dateAdded ?? .distantPast
+            if d1 != d2 {
+                return d1 > d2
+            }
+            return s1.title.localizedCaseInsensitiveCompare(s2.title) == .orderedAscending
+        }
 
         // Group into Artists
         let artistGroups = Dictionary(grouping: filtered) { song in

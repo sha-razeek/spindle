@@ -6,6 +6,7 @@ public struct Album: Identifiable, Hashable, Sendable {
     public let artistName: String
     public let year: Int
     public let songs: [Song]
+    public let dateAdded: Date?
 
     public var trackCount: Int {
         songs.count
@@ -30,6 +31,21 @@ public struct Album: Identifiable, Hashable, Sendable {
         }
     }
 
+    public var relativeDateAdded: String? {
+        guard let date = dateAdded else { return nil }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
+
+    public var formattedDateAdded: String? {
+        guard let date = dateAdded else { return nil }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
+    }
+
     public init(title: String, artistName: String, songs: [Song]) {
         self.title = title
         self.artistName = artistName
@@ -45,5 +61,6 @@ public struct Album: Identifiable, Hashable, Sendable {
         }
         self.year = songs.first(where: { $0.year > 0 })?.year ?? 0
         self.id = "\(artistName) - \(title)"
+        self.dateAdded = songs.compactMap { $0.dateAdded }.max()
     }
 }
