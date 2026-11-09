@@ -80,7 +80,7 @@ public struct TurntableDeckView: View {
                         )
                         .allowsHitTesting(false)
                     }
-                    .frame(width: sleeveSize + discSlideOffset + 120, height: sleeveSize)
+                    .frame(width: sleeveSize + discSlideOffset + 120, height: sleeveSize, alignment: .leading)
                     .transition(.opacity.combined(with: .scale(scale: 0.92)))
 
                     // MARK: - Album Details (Clean typography centered directly beneath album sleeve)
@@ -140,7 +140,7 @@ public struct TurntableDeckView: View {
     // MARK: - Empty Disk Tray (Turntable Platter with Tonearm resting away)
     @ViewBuilder
     private func emptyDiskTrayView(size: CGFloat, tonearmScale: CGFloat) -> some View {
-        VStack(spacing: 28) {
+        VStack(alignment: .leading, spacing: 28) {
             ZStack(alignment: .leading) {
                 // Circular Turntable Platter (Empty Mat)
                 ZStack {
@@ -222,7 +222,7 @@ public struct TurntableDeckView: View {
                 )
                 .allowsHitTesting(false)
             }
-            .frame(width: size + 100, height: size)
+            .frame(width: size + 100, height: size, alignment: .leading)
 
             // Welcoming subtitle centered beneath the platter
             VStack(spacing: 6) {
