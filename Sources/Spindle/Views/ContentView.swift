@@ -1,8 +1,6 @@
 import SwiftUI
 
 public enum NavigationItem: Hashable {
-    case search
-    case home
     case recentlyAdded
     case artists
     case albums
@@ -32,77 +30,46 @@ public struct ContentView: View {
     public var body: some View {
         NavigationSplitView {
             // MARK: - Sidebar
-            ScrollView {
-                VStack(alignment: .leading, spacing: 3) {
-                    sidebarItem(
-                        title: "Search",
-                        icon: "magnifyingglass",
-                        item: .search,
-                        count: nil
-                    )
-
-                    sidebarItem(
-                        title: "Home",
-                        icon: "house",
-                        item: .home,
-                        count: nil
-                    )
-
-                    Text("Library")
-                        .font(.system(size: 11.5, weight: .bold))
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal, 14)
-                        .padding(.top, 14)
-                        .padding(.bottom, 4)
-
-                    sidebarItem(
+            List(selection: $selectedItem) {
+                Section("Library") {
+                    sidebarRow(
                         title: "Recently Added",
                         icon: "clock",
                         item: .recentlyAdded,
                         count: nil
                     )
 
-                    sidebarItem(
+                    sidebarRow(
                         title: "Artists",
                         icon: "music.mic",
                         item: .artists,
                         count: nil
                     )
 
-                    sidebarItem(
+                    sidebarRow(
                         title: "Albums",
                         icon: "square.stack",
                         item: .albums,
                         count: library.albums.count
                     )
 
-                    sidebarItem(
+                    sidebarRow(
                         title: "Songs",
                         icon: "music.note",
                         item: .songs,
                         count: library.songs.count
                     )
 
-                    sidebarItem(
+                    sidebarRow(
                         title: "3D Covers",
                         icon: "square.stack.3d.up.fill",
                         item: .coverStack,
                         count: nil
                     )
                 }
-                .padding(.horizontal, 8)
-                .padding(.top, 46)
             }
-            .navigationSplitViewColumnWidth(min: 200, ideal: 235, max: 300)
-            .simultaneousGesture(
-                TapGesture().onEnded {
-                    if showExpandedNowPlaying {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                            showExpandedNowPlaying = false
-                        }
-                    }
-                }
-            )
+            .listStyle(.sidebar)
+            .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 300)
             .safeAreaInset(edge: .bottom) {
                 // Bottom Library Status
                 VStack(spacing: 6) {
@@ -186,28 +153,20 @@ public struct ContentView: View {
                         // Content switcher
                         Group {
                             switch selectedItem {
-                            case .search:
-                                SearchView(library: library, player: player)
-                            case .home:
+                            case .recentlyAdded, .none:
                                 RecentlyAddedView(
                                     albums: library.recentlyAddedAlbums,
                                     songs: library.recentlyAddedSongs,
                                     player: player
                                 )
-                            case .recentlyAdded:
-                                RecentlyAddedView(
-                                    albums: library.recentlyAddedAlbums,
-                                    songs: library.recentlyAddedSongs,
-                                    player: player
-                                )
-                            case .songs, .none:
-                                SongsListView(songs: library.songs, player: player)
-                            case .albums:
-                                AlbumsGridView(albums: library.albums, player: player)
-                            case .coverStack:
-                                CoverStackView(albums: library.albums, player: player)
                             case .artists:
                                 ArtistsView(artists: library.artists, player: player)
+                            case .albums:
+                                AlbumsGridView(albums: library.albums, player: player)
+                            case .songs:
+                                SongsListView(songs: library.songs, player: player)
+                            case .coverStack:
+                                CoverStackView(albums: library.albums, player: player)
                             }
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -267,8 +226,7 @@ public struct ContentView: View {
                 }
             }
         }
-        .toolbar(removing: .sidebarToggle)
-        .navigationTitle("")
+        .navigationTitle("Spindle")
         .toolbarBackground(.ultraThinMaterial, for: .windowToolbar)
         .toolbarBackground(.visible, for: .windowToolbar)
         .background(WindowTranslucencyConfigurator())
@@ -276,65 +234,27 @@ public struct ContentView: View {
     }
 
     @ViewBuilder
-    private func sidebarItem(title: String, icon: String, item: NavigationItem, count: Int?) -> some View {
-        SidebarItemRow(
-            title: title,
-            icon: icon,
-            iconColor: appleMusicBlue,
-            isSelected: selectedItem == item,
-            count: count
-        ) {
-            withAnimation(.easeInOut(duration: 0.15)) {
-                selectedItem = item
+    private func sidebarRow(title: String, icon: String, item: NavigationItem, count: Int?) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 16.5, weight: .medium))
+                .foregroundColor(appleMusicBlue)
+                .frame(width: 24, alignment: .center)
+
+            Text(title)
+                .font(.system(size: 14, weight: selectedItem == item ? .semibold : .regular))
+                .foregroundColor(.primary)
+
+            Spacer()
+
+            if let count = count {
+                Text(count.formatted())
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundColor(.secondary)
             }
         }
-    }
-}
-
-// MARK: - Apple Music Styled Sidebar Row
-struct SidebarItemRow: View {
-    let title: String
-    let icon: String
-    let iconColor: Color
-    let isSelected: Bool
-    let count: Int?
-    let action: () -> Void
-
-    @State private var isHovered = false
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundColor(iconColor)
-                    .frame(width: 24, height: 24, alignment: .center)
-
-                Text(title)
-                    .font(.system(size: 14.5, weight: isSelected ? .bold : .medium))
-                    .foregroundColor(.primary)
-
-                Spacer()
-
-                if let count = count {
-                    Text(count.formatted())
-                        .font(.system(size: 12, weight: .regular))
-                        .foregroundColor(.secondary)
-                }
-            }
-            .padding(.vertical, 7.5)
-            .padding(.horizontal, 10)
-            .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(isSelected ? Color.primary.opacity(0.10) : (isHovered ? Color.primary.opacity(0.04) : Color.clear))
-            )
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .onHover { hovering in
-            isHovered = hovering
-        }
-        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+        .padding(.vertical, 4)
+        .tag(item)
     }
 }
 
@@ -345,7 +265,6 @@ struct WindowTranslucencyConfigurator: NSViewRepresentable {
         let view = NSView()
         DispatchQueue.main.async {
             guard let window = view.window else { return }
-            window.titleVisibility = .hidden
             window.titlebarAppearsTransparent = true
             window.toolbar?.showsBaselineSeparator = false
             window.styleMask.insert(.fullSizeContentView)
@@ -356,7 +275,6 @@ struct WindowTranslucencyConfigurator: NSViewRepresentable {
     func updateNSView(_ nsView: NSView, context: Context) {
         DispatchQueue.main.async {
             guard let window = nsView.window else { return }
-            window.titleVisibility = .hidden
             if !window.titlebarAppearsTransparent {
                 window.titlebarAppearsTransparent = true
             }
