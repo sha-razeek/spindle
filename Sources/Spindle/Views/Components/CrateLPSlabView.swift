@@ -32,9 +32,9 @@ public struct CrateLPSlabView: View, Equatable {
 
     public var body: some View {
         ZStack(alignment: .topLeading) {
-            // MARK: - 3D Album LP Jacket & Spine Stack with Emerging White Vinyl Disc
+            // MARK: - 3D Album LP Jacket & Spine Stack (No CD/vinyl pop-out)
             VStack(spacing: 0) {
-                // Top Spine Edge (Clean tactile physical LP spine)
+                // Top Spine Edge with slightly rounded top corners
                 HStack(spacing: 6) {
                     if isSelected && isPlaying {
                         Image(systemName: "speaker.wave.2.fill")
@@ -78,14 +78,17 @@ public struct CrateLPSlabView: View, Equatable {
                     }
                 }
                 .padding(.horizontal, 10)
-                .frame(width: 275, height: 28)
-                .background(spineBgColor)
+                .frame(width: 290, height: 28)
+                .background(
+                    UnevenRoundedRectangle(topLeadingRadius: 6.5, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 6.5, style: .continuous)
+                        .fill(spineBgColor)
+                )
                 .overlay(
                     // 3D tactile bevel edge lines
                     VStack(spacing: 0) {
-                        Rectangle()
-                            .fill(Color.white.opacity(0.55))
-                            .frame(height: 1.2)
+                        UnevenRoundedRectangle(topLeadingRadius: 6.5, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 6.5, style: .continuous)
+                            .stroke(Color.white.opacity(0.55), lineWidth: 1.0)
+                            .frame(height: 2)
                         Spacer()
                         Rectangle()
                             .fill(Color.black.opacity(0.40))
@@ -94,7 +97,7 @@ public struct CrateLPSlabView: View, Equatable {
                 )
                 .overlay(
                     // Active selection highlight outline
-                    RoundedRectangle(cornerRadius: 1)
+                    UnevenRoundedRectangle(topLeadingRadius: 6.5, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 6.5, style: .continuous)
                         .stroke(isSelected ? Color.white.opacity(0.85) : Color.clear, lineWidth: 1.5)
                 )
                 .shadow(
@@ -105,31 +108,13 @@ public struct CrateLPSlabView: View, Equatable {
                 )
                 .zIndex(10)
 
-                // Front Album Artwork Jacket with White Vinyl popping out on the right
-                ZStack(alignment: .leading) {
-                    // MARK: - White LP Vinyl Disc (Pops out ~10% more when mouse is hovering)
-                    VinylDiscView(
-                        artwork: artworkImage,
-                        isPlaying: isPlaying,
-                        size: 190,
-                        isBlackVinyl: false // White vinyl disc as requested
-                    )
-                    // Normal rest: 74pt offset (peaks out through notch). Hover: 106pt offset (pops out 32pt / ~12% more!)
-                    .offset(
-                        x: isHovered ? 106 : 74,
-                        y: 5
-                    )
-                    .shadow(color: Color.black.opacity(isHovered ? 0.38 : 0.15), radius: isHovered ? 7 : 3, x: 4, y: 2)
-                    .animation(.spring(response: 0.32, dampingFraction: 0.72), value: isHovered)
-                    .zIndex(1)
-
-                    // Front Album Artwork Jacket with right thumb notch exposing the vinyl
-                    jacketView
-                        .zIndex(2)
-                }
-                .frame(width: 275, height: 180, alignment: .leading)
+                // Front Album Artwork Jacket
+                jacketView
             }
-            .frame(width: 275)
+            .frame(width: 290)
+            .clipShape(
+                UnevenRoundedRectangle(topLeadingRadius: 6.5, bottomLeadingRadius: 3.5, bottomTrailingRadius: 3.5, topTrailingRadius: 6.5, style: .continuous)
+            )
             .rotation3DEffect(
                 .degrees(-26),
                 axis: (x: 1, y: 0, z: 0),
@@ -137,19 +122,20 @@ public struct CrateLPSlabView: View, Equatable {
                 perspective: 0.38
             )
             .shadow(
-                color: Color.black.opacity(isSelected ? 0.50 : (isHovered ? 0.35 : 0.22)),
-                radius: isSelected ? 12 : (isHovered ? 8 : 4),
+                color: Color.black.opacity(isSelected ? 0.50 : (isHovered ? 0.42 : 0.22)),
+                radius: isSelected ? 12 : (isHovered ? 12 : 4),
                 x: 0,
-                y: isSelected ? 8 : (isHovered ? 5 : 2.5)
+                y: isSelected ? 8 : (isHovered ? 8 : 2.5)
             )
             .zIndex(2)
         }
         // Overlapping row height: 76pt creates stacked physical LP crate look
-        .frame(width: 310, height: 76, alignment: .topLeading)
-        .offset(y: (isHovered && !isSelected) ? -5 : 0)
+        .frame(width: 300, height: 76, alignment: .topLeading)
+        // Pops up more on hover as requested (-16pt lift)
+        .offset(y: (isHovered && !isSelected) ? -16 : 0)
         .zIndex(isHovered ? 100 : (isSelected ? 50 : 0))
-        .animation(.spring(response: 0.35, dampingFraction: 0.80), value: isSelected)
-        .animation(.easeInOut(duration: 0.15), value: isHovered)
+        .animation(.spring(response: 0.32, dampingFraction: 0.72), value: isSelected)
+        .animation(.spring(response: 0.30, dampingFraction: 0.70), value: isHovered)
         .contentShape(Rectangle())
         .onHover { h in
             isHovered = h
@@ -162,7 +148,7 @@ public struct CrateLPSlabView: View, Equatable {
         }
     }
 
-    // MARK: - Angled Jacket View with Thumb Notch
+    // MARK: - Angled Jacket View
     @ViewBuilder
     private var jacketView: some View {
         ZStack(alignment: .center) {
@@ -206,10 +192,9 @@ public struct CrateLPSlabView: View, Equatable {
                 .transition(.scale.combined(with: .opacity))
             }
         }
-        .frame(width: 275, height: 180)
-        .clipShape(SleeveWithNotchShape(hasNotch: true, cornerRadius: 3.5, notchDepth: 22, notchHeight: 46))
+        .frame(width: 290, height: 185)
         .overlay(
-            SleeveWithNotchShape(hasNotch: true, cornerRadius: 3.5, notchDepth: 22, notchHeight: 46)
+            Rectangle()
                 .stroke(Color.white.opacity(0.18), lineWidth: 1.0)
         )
     }

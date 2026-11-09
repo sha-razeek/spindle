@@ -38,13 +38,13 @@ public struct TurntableDeckView: View {
             let availableH = geo.size.height
             let availableW = geo.size.width
 
-            // Much bigger scale: ~350pt to ~430pt depending on available room
-            let sleeveSize: CGFloat = min(max(340, availableH - 220), min(430, availableW - 280))
+            // Generous scale for prominent album art and record display
+            let sleeveSize: CGFloat = min(max(380, availableH - 100), min(540, availableW - 140))
             let discSlideOffset: CGFloat = sleeveSize * 0.52
             let tonearmScale: CGFloat = sleeveSize * 0.90
 
-            VStack(spacing: 24) {
-                Spacer(minLength: 12)
+            VStack(spacing: 20) {
+                Spacer(minLength: 8)
 
                 if let album = album {
                     // MARK: - Loaded Turntable Deck: Large Album + White Vinyl Disc + Tonearm (No container rectangle)
@@ -68,149 +68,55 @@ public struct TurntableDeckView: View {
                             .onTapGesture { onTogglePlay() }
 
                         // 3. Precision Audiophile Tonearm (Placed away from disc, moves to disc when playing)
-                        let tHeight = sleeveSize * 0.90
-                        let tWidth = tHeight * (178.0 / 759.0)
+                        let tScale = tonearmScale / 380.0
                         TonearmView(
                             isPlaying: isPlaying,
-                            size: tHeight
+                            size: tonearmScale
                         )
                         .offset(
-                            x: discSlideOffset + sleeveSize * 0.86 - tWidth * 0.3764,
-                            y: sleeveSize * 0.08 - tHeight * 0.2200
+                            x: discSlideOffset + sleeveSize * 0.86 - 40 * tScale,
+                            y: sleeveSize * 0.08 - 68 * tScale
                         )
                         .allowsHitTesting(false)
                     }
                     .frame(width: sleeveSize + discSlideOffset + 120, height: sleeveSize)
                     .transition(.opacity.combined(with: .scale(scale: 0.92)))
 
-                    // MARK: - Album Details & Playback Transport Controls
-                    VStack(spacing: 12) {
-                        // Title & Artist
-                        VStack(spacing: 4) {
-                            HStack(spacing: 6) {
-                                if isPlaying {
-                                    Image(systemName: "speaker.wave.2.fill")
-                                        .font(.system(size: 11, weight: .bold))
-                                        .foregroundColor(.accentColor)
-                                }
-                                Text("NOW PLAYING")
-                                    .font(.system(size: 10.5, weight: .bold))
-                                    .tracking(1.2)
-                                    .foregroundColor(.white.opacity(0.70))
+                    // MARK: - Album Details (Clean typography without redundant controls)
+                    VStack(spacing: 4) {
+                        HStack(spacing: 6) {
+                            if isPlaying {
+                                Image(systemName: "speaker.wave.2.fill")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundColor(.accentColor)
                             }
-
-                            Text(album.title)
-                                .font(.system(size: 22, weight: .bold))
-                                .foregroundColor(.white)
-                                .lineLimit(1)
-
-                            Text(album.artistName)
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundColor(.white.opacity(0.85))
-                                .lineLimit(1)
-
-                            HStack(spacing: 8) {
-                                if album.year > 0 {
-                                    Text("\(album.year)")
-                                }
-                                Text("•")
-                                Text("\(album.trackCount) tracks")
-                                Text("•")
-                                Text(album.formattedDuration)
-                            }
-                            .font(.system(size: 11.5))
-                            .foregroundColor(.white.opacity(0.60))
+                            Text("NOW PLAYING")
+                                .font(.system(size: 10.5, weight: .bold))
+                                .tracking(1.2)
+                                .foregroundColor(.white.opacity(0.70))
                         }
 
-                        // Transport Controls
-                        HStack(spacing: 16) {
-                            // Previous Track
-                            Button {
-                                player.previousTrack()
-                            } label: {
-                                Image(systemName: "backward.fill")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.white.opacity(0.85))
-                                    .frame(width: 36, height: 36)
-                            }
-                            .buttonStyle(.plain)
-                            .disabled(!player.hasPrevious)
-                            .help("Previous Track")
+                        Text(album.title)
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
 
-                            // Play / Pause Button
-                            Button {
-                                onTogglePlay()
-                            } label: {
-                                ZStack {
-                                    Circle()
-                                        .fill(Color.accentColor)
-                                        .frame(width: 50, height: 50)
-                                        .shadow(color: Color.accentColor.opacity(0.45), radius: 10, x: 0, y: 4)
-                                    Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                                        .font(.system(size: 20, weight: .bold))
-                                        .foregroundColor(.white)
-                                        .offset(x: isPlaying ? 0 : 1.5)
-                                }
-                            }
-                            .buttonStyle(.plain)
-                            .help(isPlaying ? "Pause" : "Play")
+                        Text(album.artistName)
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.white.opacity(0.85))
+                            .lineLimit(1)
 
-                            // Next Track
-                            Button {
-                                player.nextTrack()
-                            } label: {
-                                Image(systemName: "forward.fill")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.white.opacity(0.85))
-                                    .frame(width: 36, height: 36)
+                        HStack(spacing: 8) {
+                            if album.year > 0 {
+                                Text(String(album.year))
                             }
-                            .buttonStyle(.plain)
-                            .disabled(!player.hasNext)
-                            .help("Next Track")
-
-                            Divider()
-                                .frame(height: 22)
-                                .background(Color.white.opacity(0.25))
-
-                            // Tracklist Button
-                            Button {
-                                onSelectDetail()
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "list.bullet")
-                                    Text("Tracklist")
-                                }
-                                .font(.system(size: 12.5, weight: .semibold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 7)
-                                .background(
-                                    Capsule()
-                                        .fill(.ultraThinMaterial)
-                                        .overlay(
-                                            Capsule().stroke(Color.white.opacity(0.25), lineWidth: 1)
-                                        )
-                                )
-                            }
-                            .buttonStyle(.plain)
-                            .help("View Full Album Tracklist")
-
-                            // Eject / Clear Platter Button
-                            if let onEject = onEject {
-                                Button {
-                                    onEject()
-                                } label: {
-                                    Image(systemName: "eject.fill")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.white.opacity(0.75))
-                                        .padding(7)
-                                        .background(Circle().fill(.ultraThinMaterial))
-                                }
-                                .buttonStyle(.plain)
-                                .help("Eject Album / Return to Empty Tray")
-                            }
+                            Text("•")
+                            Text("\(album.trackCount) tracks")
+                            Text("•")
+                            Text(album.formattedDuration)
                         }
-                        .padding(.top, 4)
+                        .font(.system(size: 11.5))
+                        .foregroundColor(.white.opacity(0.60))
                     }
                     .transition(.opacity.combined(with: .scale(scale: 0.96)))
                 } else {
@@ -302,15 +208,14 @@ public struct TurntableDeckView: View {
                 .frame(width: size, height: size)
 
                 // Tonearm resting away on its armrest post outside the platter
-                let tHeight = size * 0.90
-                let tWidth = tHeight * (178.0 / 759.0)
+                let tScale = tonearmScale / 380.0
                 TonearmView(
                     isPlaying: false,
-                    size: tHeight
+                    size: tonearmScale
                 )
                 .offset(
-                    x: size * 0.86 - tWidth * 0.3764,
-                    y: size * 0.08 - tHeight * 0.2200
+                    x: size * 0.86 - 40 * tScale,
+                    y: size * 0.08 - 68 * tScale
                 )
                 .allowsHitTesting(false)
             }
