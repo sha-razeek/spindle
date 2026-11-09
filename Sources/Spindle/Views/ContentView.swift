@@ -183,39 +183,15 @@ public struct ContentView: View {
                 }
             }
             .toolbar {
-                if selectedItem == .songs || selectedItem == .albums || selectedItem == .coverStack {
-                    ToolbarItem(placement: .automatic) {
-                        Picker("View Mode", selection: Binding(
-                            get: {
-                                switch selectedItem {
-                                case .songs: return LibraryViewMode.songs
-                                case .albums: return LibraryViewMode.grid
-                                case .coverStack: return LibraryViewMode.stack
-                                default: return LibraryViewMode.songs
-                                }
-                            },
-                            set: { newMode in
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    switch newMode {
-                                    case .songs: selectedItem = .songs
-                                    case .grid: selectedItem = .albums
-                                    case .stack: selectedItem = .coverStack
-                                    }
-                                }
-                            }
-                        )) {
-                            Image(systemName: "list.bullet").tag(LibraryViewMode.songs)
-                            Image(systemName: "square.grid.2x2").tag(LibraryViewMode.grid)
-                            Image(systemName: "square.stack.3d.up.fill").tag(LibraryViewMode.stack)
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(width: 110)
-                        .help("Switch between Song List, Album Grid, and 3D Covers")
+                ToolbarItemGroup(placement: .automatic) {
+                    if selectedItem == .songs || selectedItem == .albums || selectedItem == .coverStack {
+                        ToolbarViewModeSwitcher(selectedItem: $selectedItem)
                     }
+
+                    ToolbarSearchField(query: $library.searchQuery)
                 }
             }
         }
-        .searchable(text: $library.searchQuery, prompt: "Search songs, artists, albums...")
         .onChange(of: library.searchQuery) { _, _ in
             library.rebuildCollections()
         }
@@ -283,5 +259,121 @@ struct WindowTranslucencyConfigurator: NSViewRepresentable {
             }
             window.toolbar?.showsBaselineSeparator = false
         }
+    }
+}
+
+// MARK: - Apple Music Styled View Mode Switcher (Capsule buttons with very rounded corners)
+struct ToolbarViewModeSwitcher: View {
+    @Binding var selectedItem: NavigationItem?
+
+    var currentMode: LibraryViewMode {
+        switch selectedItem {
+        case .songs: return .songs
+        case .albums: return .grid
+        case .coverStack: return .stack
+        default: return .songs
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 2) {
+            switcherButton(icon: "list.bullet", mode: .songs, help: "Song List") {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    selectedItem = .songs
+                }
+            }
+
+            switcherButton(icon: "square.grid.2x2", mode: .grid, help: "Album Grid") {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    selectedItem = .albums
+                }
+            }
+
+            switcherButton(icon: "square.stack.3d.up.fill", mode: .stack, help: "3D Covers") {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    selectedItem = .coverStack
+                }
+            }
+        }
+        .padding(2.5)
+        .background(
+            Capsule()
+                .fill(Color.primary.opacity(0.06))
+        )
+        .overlay(
+            Capsule()
+                .stroke(Color.primary.opacity(0.08), lineWidth: 0.8)
+        )
+        .frame(height: 28)
+    }
+
+    @ViewBuilder
+    private func switcherButton(icon: String, mode: LibraryViewMode, help: String, action: @escaping () -> Void) -> some View {
+        let isSelected = currentMode == mode
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
+                .foregroundColor(isSelected ? .primary : .secondary)
+                .frame(width: 28, height: 23)
+                .background(
+                    Group {
+                        if isSelected {
+                            Capsule()
+                                .fill(Color(NSColor.controlBackgroundColor))
+                                .shadow(color: Color.black.opacity(0.12), radius: 2, x: 0, y: 1)
+                        } else {
+                            Color.clear
+                        }
+                    }
+                )
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .help(help)
+    }
+}
+
+// MARK: - Apple Music Styled Search Field (Capsule with very rounded corners)
+struct ToolbarSearchField: View {
+    @Binding var query: String
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.secondary)
+
+            TextField("Find in Library", text: $query)
+                .textFieldStyle(.plain)
+                .font(.system(size: 12.5))
+                .focused($isFocused)
+
+            if !query.isEmpty {
+                Button {
+                    query = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 11.5))
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .frame(width: 200, height: 28)
+        .background(
+            Capsule()
+                .fill(Color.primary.opacity(0.06))
+        )
+        .overlay(
+            Capsule()
+                .stroke(
+                    isFocused ? Color(red: 0.004, green: 0.471, blue: 0.941).opacity(0.85) : Color.primary.opacity(0.10),
+                    lineWidth: isFocused ? 1.5 : 0.8
+                )
+        )
+        .animation(.easeInOut(duration: 0.15), value: isFocused)
     }
 }
