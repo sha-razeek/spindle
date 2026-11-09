@@ -38,11 +38,26 @@ public struct TurntableDeckView: View {
             let availableH = geo.size.height
             let availableW = geo.size.width
 
-            // Generous scale for prominent album art and turntable display
-            let sleeveSize: CGFloat = min(max(380, availableH - 100), min(540, availableW - 140))
+            // Dynamic responsive scaling for album art and turntable display:
+            // Calculate headroom so it gracefully scales up to 920pt on 4K displays
+            let minLeftPadding: CGFloat = max(24, min(64, availableW * 0.035))
+            let minRightMargin: CGFloat = max(24, min(50, availableW * 0.030))
+
+            // Vertical constraint: ensure deck + details + margins fit comfortably
+            let maxSleeveH: CGFloat = max(320, availableH - 135)
+
+            // Horizontal constraint: total deck frame width is (sleeveSize * 1.52 + 120)
+            let maxSleeveW: CGFloat = max(320, (availableW - minLeftPadding - minRightMargin - 120) / 1.52)
+
+            // Dynamic sleeve size: up to 920pt on ultra-large 4K / 5K screens
+            let sleeveSize: CGFloat = min(920, min(maxSleeveH, maxSleeveW))
             let discSlideOffset: CGFloat = sleeveSize * 0.52
             let tonearmScale: CGFloat = sleeveSize * 0.98
-            let leftPadding: CGFloat = max(28, min(50, availableW * 0.045))
+
+            // Deck width and dynamic left margin to center the turntable across wide screens
+            let deckFrameWidth: CGFloat = sleeveSize + discSlideOffset + 120
+            let spareWidth: CGFloat = max(0, availableW - (deckFrameWidth + minLeftPadding + minRightMargin))
+            let leftPadding: CGFloat = minLeftPadding + spareWidth * 0.40
 
             // Mathematical alignment matching the Teenage Engineering Bauhaus turntable reference:
             // Center of the turntable platter & vinyl disc:
@@ -54,7 +69,14 @@ public struct TurntableDeckView: View {
             let tonearmPivotY: CGFloat = spindleY - sleeveSize * 0.396
             let tScale = tonearmScale / 380.0
 
-            VStack(alignment: .leading, spacing: 20) {
+            let deckSpacing = max(18.0, min(28.0, sleeveSize * 0.028))
+            let titleSize = max(22.0, min(34.0, sleeveSize * 0.038))
+            let artistSize = max(15.0, min(22.0, sleeveSize * 0.024))
+            let badgeSize = max(10.5, min(14.0, sleeveSize * 0.016))
+            let metaSize = max(11.5, min(15.5, sleeveSize * 0.018))
+            let detailSpacing = max(4.0, min(7.0, sleeveSize * 0.007))
+
+            VStack(alignment: .leading, spacing: deckSpacing) {
                 Spacer(minLength: 8)
 
                 if let album = album {
@@ -89,30 +111,30 @@ public struct TurntableDeckView: View {
                         )
                         .allowsHitTesting(false)
                     }
-                    .frame(width: sleeveSize + discSlideOffset + 120, height: sleeveSize, alignment: .leading)
+                    .frame(width: deckFrameWidth, height: sleeveSize, alignment: .leading)
                     .transition(.opacity.combined(with: .scale(scale: 0.94)))
 
                     // MARK: - Album Details (Clean typography centered directly beneath album sleeve)
-                    VStack(spacing: 4) {
+                    VStack(spacing: detailSpacing) {
                         HStack(spacing: 6) {
                             if isPlaying {
                                 Image(systemName: "speaker.wave.2.fill")
-                                    .font(.system(size: 11, weight: .bold))
+                                    .font(.system(size: badgeSize + 0.5, weight: .bold))
                                     .foregroundColor(.accentColor)
                             }
                             Text("NOW PLAYING")
-                                .font(.system(size: 10.5, weight: .bold))
+                                .font(.system(size: badgeSize, weight: .bold))
                                 .tracking(1.2)
                                 .foregroundColor(.white.opacity(0.70))
                         }
 
                         Text(album.title)
-                            .font(.system(size: 22, weight: .bold))
+                            .font(.system(size: titleSize, weight: .bold))
                             .foregroundColor(.white)
                             .lineLimit(1)
 
                         Text(album.artistName)
-                            .font(.system(size: 15, weight: .medium))
+                            .font(.system(size: artistSize, weight: .medium))
                             .foregroundColor(.white.opacity(0.85))
                             .lineLimit(1)
 
@@ -125,7 +147,7 @@ public struct TurntableDeckView: View {
                             Text("•")
                             Text(album.formattedDuration)
                         }
-                        .font(.system(size: 11.5))
+                        .font(.system(size: metaSize))
                         .foregroundColor(.white.opacity(0.60))
                     }
                     .frame(width: sleeveSize)
@@ -295,13 +317,15 @@ public struct TurntableDeckView: View {
                         .shadow(color: Color.black.opacity(0.40), radius: 16, x: 4, y: 6)
 
                     // • EJECT Label at Bottom-Left Corner
+                    let ejectFontSize = max(10.5, min(14.5, size * 0.017))
+                    let ejectDotSize = max(5.0, min(7.5, size * 0.009))
                     HStack(spacing: 5.5) {
                         Circle()
                             .fill(Color(red: 0.88, green: 0.22, blue: 0.18))
-                            .frame(width: 5.5, height: 5.5)
+                            .frame(width: ejectDotSize, height: ejectDotSize)
 
                         Text("EJECT")
-                            .font(.system(size: 11, weight: .bold, design: .default))
+                            .font(.system(size: ejectFontSize, weight: .bold, design: .default))
                             .tracking(1.8)
                             .foregroundColor(Color(red: 0.88, green: 0.22, blue: 0.18))
                     }
@@ -324,19 +348,22 @@ public struct TurntableDeckView: View {
             .frame(width: size + discSlideOffset + 120, height: size, alignment: .leading)
 
             // Welcoming subtitle centered beneath the deck
-            VStack(spacing: 6) {
+            let readyIconSize = max(15.0, min(20.0, size * 0.022))
+            let readyTitleSize = max(12.0, min(16.0, size * 0.018))
+            let readySubSize = max(13.0, min(16.5, size * 0.019))
+            VStack(spacing: max(6.0, min(9.0, size * 0.010))) {
                 HStack(spacing: 7) {
                     Image(systemName: "record.circle")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: readyIconSize, weight: .semibold))
                         .foregroundColor(.accentColor)
                     Text("TURNTABLE READY")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: readyTitleSize, weight: .bold))
                         .tracking(1.4)
                         .foregroundColor(.white.opacity(0.85))
                 }
 
                 Text("Select an LP from the crate on the right to start playing")
-                    .font(.system(size: 13))
+                    .font(.system(size: readySubSize))
                     .foregroundColor(.white.opacity(0.60))
             }
             .frame(width: size)
@@ -346,6 +373,10 @@ public struct TurntableDeckView: View {
     // MARK: - Album Jacket Sleeve
     @ViewBuilder
     private func albumJacketView(size: CGFloat) -> some View {
+        let playPillSize = max(56.0, min(84.0, size * 0.10))
+        let playIconSize = max(22.0, min(34.0, size * 0.040))
+        let notchCornerRadius = max(8.0, min(16.0, size * 0.018))
+
         ZStack(alignment: .center) {
             // Artwork Image
             if let img = artworkImage {
@@ -384,9 +415,9 @@ public struct TurntableDeckView: View {
                 ZStack {
                     Circle()
                         .fill(Color.black.opacity(0.65))
-                        .frame(width: 56, height: 56)
+                        .frame(width: playPillSize, height: playPillSize)
                     Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 22, weight: .bold))
+                        .font(.system(size: playIconSize, weight: .bold))
                         .foregroundColor(.white)
                         .offset(x: isPlaying ? 0 : 2)
                 }
@@ -394,9 +425,9 @@ public struct TurntableDeckView: View {
             }
         }
         .frame(width: size, height: size)
-        .clipShape(SleeveWithNotchShape(hasNotch: true, cornerRadius: 8, notchDepth: size * 0.12, notchHeight: size * 0.22))
+        .clipShape(SleeveWithNotchShape(hasNotch: true, cornerRadius: notchCornerRadius, notchDepth: size * 0.12, notchHeight: size * 0.22))
         .overlay(
-            SleeveWithNotchShape(hasNotch: true, cornerRadius: 8, notchDepth: size * 0.12, notchHeight: size * 0.22)
+            SleeveWithNotchShape(hasNotch: true, cornerRadius: notchCornerRadius, notchDepth: size * 0.12, notchHeight: size * 0.22)
                 .stroke(Color.white.opacity(0.24), lineWidth: 1.2)
         )
         .shadow(color: Color.black.opacity(0.55), radius: 24, x: -6, y: 12)

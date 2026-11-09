@@ -96,17 +96,17 @@ public final class ArtworkLoader: @unchecked Sendable {
 
                 // 1. Try reading iTunes Library artwork data
                 if let itItem = itItem, let art = itItem.artwork {
-                    if let data = art.imageData, let img = self.createThumbnail(from: data, maxPixelSize: 500) {
+                    if let data = art.imageData, let img = self.createThumbnail(from: data, maxPixelSize: 1200) {
                         loadedImage = img
                     } else if let img = art.image {
-                        loadedImage = self.downsample(image: img, maxPixelSize: 500)
+                        loadedImage = self.downsample(image: img, maxPixelSize: 1200)
                     }
                 }
 
                 // 2. Fallback: extract embedded artwork directly from the audio file using AVAsset
                 if loadedImage == nil, let location = location {
                     if let img = await self.extractArtworkFromFile(url: location) {
-                        loadedImage = self.downsample(image: img, maxPixelSize: 500)
+                        loadedImage = self.downsample(image: img, maxPixelSize: 1200)
                     }
                 }
 
@@ -139,7 +139,7 @@ public final class ArtworkLoader: @unchecked Sendable {
         return result
     }
 
-    private func createThumbnail(from data: Data, maxPixelSize: CGFloat = 500) -> NSImage? {
+    private func createThumbnail(from data: Data, maxPixelSize: CGFloat = 1200) -> NSImage? {
         let sourceOptions: [CFString: Any] = [
             kCGImageSourceShouldCache: false
         ]
@@ -158,7 +158,7 @@ public final class ArtworkLoader: @unchecked Sendable {
         return NSImage(cgImage: cgThumb, size: NSSize(width: maxPixelSize, height: maxPixelSize))
     }
 
-    private func downsample(image: NSImage, maxPixelSize: CGFloat = 500) -> NSImage {
+    private func downsample(image: NSImage, maxPixelSize: CGFloat = 1200) -> NSImage {
         guard let tiff = image.tiffRepresentation else { return image }
         let sourceOptions: [CFString: Any] = [
             kCGImageSourceShouldCache: false
