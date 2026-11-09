@@ -23,36 +23,61 @@ public struct ContentView: View {
     @State private var selectedItem: NavigationItem? = .recentlyAdded
     @State private var showExpandedNowPlaying: Bool = false
 
+    private let appleMusicBlue = Color(red: 0.004, green: 0.471, blue: 0.941)
+
     public init() {}
 
     public var body: some View {
         NavigationSplitView {
             // MARK: - Sidebar
-            List(selection: $selectedItem) {
-                Section("Library") {
-                    Label("Recently Added", systemImage: "clock")
-                        .badge(library.recentlyAddedAlbums.count)
-                        .tag(NavigationItem.recentlyAdded)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Library")
+                        .font(.system(size: 11.5, weight: .bold))
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 14)
+                        .padding(.top, 12)
+                        .padding(.bottom, 4)
 
-                    Label("Songs", systemImage: "music.note")
-                        .badge(library.songs.count)
-                        .tag(NavigationItem.songs)
+                    sidebarItem(
+                        title: "Recently Added",
+                        icon: "clock",
+                        item: .recentlyAdded,
+                        count: nil
+                    )
 
-                    Label("Albums", systemImage: "square.stack")
-                        .badge(library.albums.count)
-                        .tag(NavigationItem.albums)
+                    sidebarItem(
+                        title: "Artists",
+                        icon: "music.mic",
+                        item: .artists,
+                        count: nil
+                    )
 
-                    Label("3D Covers", systemImage: "square.stack.3d.up.fill")
-                        .badge(library.albums.count)
-                        .tag(NavigationItem.coverStack)
+                    sidebarItem(
+                        title: "Albums",
+                        icon: "square.stack",
+                        item: .albums,
+                        count: library.albums.count
+                    )
 
-                    Label("Artists", systemImage: "music.mic")
-                        .badge(library.artists.count)
-                        .tag(NavigationItem.artists)
+                    sidebarItem(
+                        title: "Songs",
+                        icon: "music.note",
+                        item: .songs,
+                        count: library.songs.count
+                    )
+
+                    sidebarItem(
+                        title: "3D Covers",
+                        icon: "square.stack.3d.up.fill",
+                        item: .coverStack,
+                        count: nil
+                    )
                 }
+                .padding(.horizontal, 8)
+                .padding(.top, 4)
             }
-            .listStyle(.sidebar)
-            .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 300)
+            .navigationSplitViewColumnWidth(min: 200, ideal: 235, max: 300)
             .simultaneousGesture(
                 TapGesture().onEnded {
                     if showExpandedNowPlaying {
@@ -223,6 +248,68 @@ public struct ContentView: View {
         .toolbarBackground(.visible, for: .windowToolbar)
         .background(WindowTranslucencyConfigurator())
         .frame(minWidth: 900, minHeight: 600)
+    }
+
+    @ViewBuilder
+    private func sidebarItem(title: String, icon: String, item: NavigationItem, count: Int?) -> some View {
+        SidebarItemRow(
+            title: title,
+            icon: icon,
+            iconColor: appleMusicBlue,
+            isSelected: selectedItem == item,
+            count: count
+        ) {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                selectedItem = item
+            }
+        }
+    }
+}
+
+// MARK: - Apple Music Styled Sidebar Row
+struct SidebarItemRow: View {
+    let title: String
+    let icon: String
+    let iconColor: Color
+    let isSelected: Bool
+    let count: Int?
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundColor(iconColor)
+                    .frame(width: 24, height: 24, alignment: .center)
+
+                Text(title)
+                    .font(.system(size: 14.5, weight: isSelected ? .bold : .medium))
+                    .foregroundColor(.primary)
+
+                Spacer()
+
+                if let count = count {
+                    Text(count.formatted())
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(.vertical, 7.5)
+            .padding(.horizontal, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(isSelected ? Color.primary.opacity(0.10) : (isHovered ? Color.primary.opacity(0.04) : Color.clear))
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            isHovered = hovering
+        }
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 }
 
