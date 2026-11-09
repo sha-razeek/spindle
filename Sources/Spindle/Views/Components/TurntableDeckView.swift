@@ -42,8 +42,9 @@ public struct TurntableDeckView: View {
             let sleeveSize: CGFloat = min(max(380, availableH - 100), min(540, availableW - 140))
             let discSlideOffset: CGFloat = sleeveSize * 0.52
             let tonearmScale: CGFloat = sleeveSize * 0.90
+            let leftPadding: CGFloat = max(28, min(50, availableW * 0.045))
 
-            VStack(spacing: 20) {
+            VStack(alignment: .leading, spacing: 20) {
                 Spacer(minLength: 8)
 
                 if let album = album {
@@ -82,7 +83,7 @@ public struct TurntableDeckView: View {
                     .frame(width: sleeveSize + discSlideOffset + 120, height: sleeveSize)
                     .transition(.opacity.combined(with: .scale(scale: 0.92)))
 
-                    // MARK: - Album Details (Clean typography without redundant controls)
+                    // MARK: - Album Details (Clean typography centered directly beneath album sleeve)
                     VStack(spacing: 4) {
                         HStack(spacing: 6) {
                             if isPlaying {
@@ -118,6 +119,7 @@ public struct TurntableDeckView: View {
                         .font(.system(size: 11.5))
                         .foregroundColor(.white.opacity(0.60))
                     }
+                    .frame(width: sleeveSize)
                     .transition(.opacity.combined(with: .scale(scale: 0.96)))
                 } else {
                     // MARK: - Empty Disk Tray (When a song isn't selected)
@@ -127,7 +129,8 @@ public struct TurntableDeckView: View {
 
                 Spacer(minLength: 16)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.leading, leftPadding)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         }
         .task(id: album?.id) {
             await loadArtwork()
@@ -221,7 +224,7 @@ public struct TurntableDeckView: View {
             }
             .frame(width: size + 100, height: size)
 
-            // Welcoming subtitle
+            // Welcoming subtitle centered beneath the platter
             VStack(spacing: 6) {
                 HStack(spacing: 7) {
                     Image(systemName: "record.circle")
@@ -237,6 +240,7 @@ public struct TurntableDeckView: View {
                     .font(.system(size: 13))
                     .foregroundColor(.white.opacity(0.60))
             }
+            .frame(width: size)
         }
     }
 

@@ -31,7 +31,7 @@ private struct CoverBackdropView: View, Equatable {
                     backdrop.mid.opacity(0.20),
                     Color.clear
                 ],
-                center: .init(x: 0.35, y: 0.40),
+                center: .init(x: 0.28, y: 0.42),
                 startRadius: 80,
                 endRadius: 800
             )
@@ -41,7 +41,7 @@ private struct CoverBackdropView: View, Equatable {
             Circle()
                 .fill(backdrop.primary.opacity(0.35))
                 .frame(width: 700, height: 700)
-                .offset(x: -60, y: -40)
+                .offset(x: -120, y: -40)
                 .blur(radius: 130)
                 .allowsHitTesting(false)
         }
@@ -330,16 +330,16 @@ public struct CoverStackView: View {
 
                             Color.clear.frame(height: 140)
                         }
-                        .padding(.leading, 8)
-                        .padding(.trailing, 26) // Space for scrubber & index
+                        .padding(.leading, 46) // Dedicated breathing space between alphabet index and albums
+                        .padding(.trailing, 26) // Space for scrubber bar on right
                     }
                 }
-                .frame(width: 345)
+                .frame(width: 395)
 
                 // Left Alphabet Jump Index overlay
                 HStack {
                     alphabetStrip(proxy: proxy)
-                        .padding(.leading, 6)
+                        .padding(.leading, 8)
                     Spacer()
                 }
 
@@ -365,11 +365,11 @@ public struct CoverStackView: View {
                     }
                     .allowsHitTesting(false)
                     .transition(.scale(scale: 0.85).combined(with: .opacity))
-                    .padding(.trailing, 140)
+                    .padding(.trailing, 160)
                     .zIndex(1000)
                 }
             }
-            .frame(width: 355)
+            .frame(width: 395)
             .background(Color.black.opacity(0.18))
         }
     }

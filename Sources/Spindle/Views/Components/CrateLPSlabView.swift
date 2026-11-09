@@ -78,7 +78,7 @@ public struct CrateLPSlabView: View, Equatable {
                     }
                 }
                 .padding(.horizontal, 10)
-                .frame(width: 290, height: 28)
+                .frame(width: 320, height: 28)
                 .background(
                     UnevenRoundedRectangle(topLeadingRadius: 6.5, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 6.5, style: .continuous)
                         .fill(spineBgColor)
@@ -111,7 +111,7 @@ public struct CrateLPSlabView: View, Equatable {
                 // Front Album Artwork Jacket
                 jacketView
             }
-            .frame(width: 290)
+            .frame(width: 320)
             .clipShape(
                 UnevenRoundedRectangle(topLeadingRadius: 6.5, bottomLeadingRadius: 3.5, bottomTrailingRadius: 3.5, topTrailingRadius: 6.5, style: .continuous)
             )
@@ -122,17 +122,18 @@ public struct CrateLPSlabView: View, Equatable {
                 perspective: 0.38
             )
             .shadow(
-                color: Color.black.opacity(isSelected ? 0.50 : (isHovered ? 0.42 : 0.22)),
-                radius: isSelected ? 12 : (isHovered ? 12 : 4),
+                color: Color.black.opacity(isSelected ? 0.50 : (isHovered ? 0.46 : 0.22)),
+                radius: isSelected ? 12 : (isHovered ? 14 : 4),
                 x: 0,
-                y: isSelected ? 8 : (isHovered ? 8 : 2.5)
+                y: isSelected ? 8 : (isHovered ? 10 : 2.5)
             )
             .zIndex(2)
         }
         // Overlapping row height: 76pt creates stacked physical LP crate look
-        .frame(width: 300, height: 76, alignment: .topLeading)
-        // Pops up more on hover as requested (-16pt lift)
-        .offset(y: (isHovered && !isSelected) ? -16 : 0)
+        .frame(width: 325, height: 76, alignment: .topLeading)
+        // Pops up about 10% more on hover (-18.5pt lift, subtle scale & elevated shadow)
+        .offset(y: isHovered ? -18.5 : (isSelected ? -4 : 0))
+        .scaleEffect(isHovered ? 1.018 : 1.0, anchor: .top)
         .zIndex(isHovered ? 100 : (isSelected ? 50 : 0))
         .animation(.spring(response: 0.32, dampingFraction: 0.72), value: isSelected)
         .animation(.spring(response: 0.30, dampingFraction: 0.70), value: isHovered)
@@ -192,7 +193,7 @@ public struct CrateLPSlabView: View, Equatable {
                 .transition(.scale.combined(with: .opacity))
             }
         }
-        .frame(width: 290, height: 185)
+        .frame(width: 320, height: 185)
         .overlay(
             Rectangle()
                 .stroke(Color.white.opacity(0.18), lineWidth: 1.0)
