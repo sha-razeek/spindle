@@ -1,20 +1,22 @@
 import SwiftUI
 import AppKit
 
-public enum RecentlyAddedScope: String, CaseIterable, Identifiable {
-    case albums = "Albums"
+public enum RecentlyAddedDisplayMode: String, CaseIterable, Identifiable {
     case songs = "Songs"
+    case grid = "Grid"
+    case stack = "3D Stack"
 
     public var id: String { rawValue }
 }
+
+public typealias RecentlyAddedScope = RecentlyAddedDisplayMode
 
 public struct RecentlyAddedView: View {
     let albums: [Album]
     let songs: [Song]
     @ObservedObject var player: AudioPlayer
 
-    @State private var scope: RecentlyAddedScope = .albums
-    @State private var displayMode: AlbumDisplayMode = .grid
+    @State private var displayMode: RecentlyAddedDisplayMode = .grid
     @State private var selectedAlbum: Album?
     @State private var hoveredAlbumID: String?
     @State private var hoveredSongID: String?
@@ -36,35 +38,25 @@ public struct RecentlyAddedView: View {
             }
         } else {
             VStack(spacing: 0) {
-                switch scope {
-                case .albums:
-                    if displayMode == .stack {
-                        CoverStackView(albums: albums, player: player)
-                    } else {
-                        albumsGridView
-                    }
+                switch displayMode {
                 case .songs:
                     songsListView
+                case .grid:
+                    albumsGridView
+                case .stack:
+                    CoverStackView(albums: albums, player: player)
                 }
             }
             .toolbar {
-                ToolbarItemGroup(placement: .automatic) {
-                    Picker("Scope", selection: $scope) {
-                        Text("Albums").tag(RecentlyAddedScope.albums)
-                        Text("Songs").tag(RecentlyAddedScope.songs)
+                ToolbarItem(placement: .automatic) {
+                    Picker("View Mode", selection: $displayMode) {
+                        Image(systemName: "list.bullet").tag(RecentlyAddedDisplayMode.songs)
+                        Image(systemName: "square.grid.2x2").tag(RecentlyAddedDisplayMode.grid)
+                        Image(systemName: "square.stack.3d.up.fill").tag(RecentlyAddedDisplayMode.stack)
                     }
                     .pickerStyle(.segmented)
-                    .frame(width: 140)
-
-                    if scope == .albums {
-                        Picker("View Mode", selection: $displayMode) {
-                            Image(systemName: "square.grid.2x2").tag(AlbumDisplayMode.grid)
-                            Image(systemName: "square.stack.3d.up.fill").tag(AlbumDisplayMode.stack)
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(width: 80)
-                        .help("Switch between Grid and 3D Cover Stack")
-                    }
+                    .frame(width: 110)
+                    .help("Switch between Recently Added Songs, Album Grid, and 3D Stack")
                 }
             }
         }
@@ -203,7 +195,7 @@ public struct RecentlyAddedView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
-            .background(Color(NSColor.controlBackgroundColor).opacity(0.6))
+            .background(.ultraThinMaterial)
 
             Divider()
 

@@ -8,6 +8,14 @@ public enum NavigationItem: Hashable {
     case artists
 }
 
+public enum LibraryViewMode: String, CaseIterable, Identifiable {
+    case songs = "Songs"
+    case grid = "Grid"
+    case stack = "3D Stack"
+
+    public var id: String { rawValue }
+}
+
 public struct ContentView: View {
     @StateObject private var library = LibraryManager()
     @StateObject private var player = AudioPlayer.shared
@@ -163,6 +171,38 @@ public struct ContentView: View {
                         }
                         .padding(.horizontal, 28)
                         .padding(.bottom, 16)
+                    }
+                }
+            }
+            .toolbar {
+                if selectedItem == .songs || selectedItem == .albums || selectedItem == .coverStack {
+                    ToolbarItem(placement: .automatic) {
+                        Picker("View Mode", selection: Binding(
+                            get: {
+                                switch selectedItem {
+                                case .songs: return LibraryViewMode.songs
+                                case .albums: return LibraryViewMode.grid
+                                case .coverStack: return LibraryViewMode.stack
+                                default: return LibraryViewMode.songs
+                                }
+                            },
+                            set: { newMode in
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    switch newMode {
+                                    case .songs: selectedItem = .songs
+                                    case .grid: selectedItem = .albums
+                                    case .stack: selectedItem = .coverStack
+                                    }
+                                }
+                            }
+                        )) {
+                            Image(systemName: "list.bullet").tag(LibraryViewMode.songs)
+                            Image(systemName: "square.grid.2x2").tag(LibraryViewMode.grid)
+                            Image(systemName: "square.stack.3d.up.fill").tag(LibraryViewMode.stack)
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 110)
+                        .help("Switch between Song List, Album Grid, and 3D Covers")
                     }
                 }
             }

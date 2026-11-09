@@ -93,7 +93,7 @@ public struct SongsListView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
-            .background(Color(NSColor.controlBackgroundColor).opacity(0.6))
+            .background(.ultraThinMaterial)
 
             Divider()
 

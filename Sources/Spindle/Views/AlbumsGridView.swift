@@ -11,7 +11,6 @@ public struct AlbumsGridView: View {
     let albums: [Album]
     @ObservedObject var player: AudioPlayer
 
-    @State private var displayMode: AlbumDisplayMode = .grid
     @State private var selectedAlbum: Album?
     @State private var hoveredAlbumID: String?
 
@@ -29,13 +28,6 @@ public struct AlbumsGridView: View {
             AlbumDetailView(album: album, player: player) {
                 selectedAlbum = nil
             }
-        } else if displayMode == .stack {
-            CoverStackView(albums: albums, player: player)
-                .toolbar {
-                    ToolbarItem(placement: .automatic) {
-                        displayModePicker
-                    }
-                }
         } else {
             VStack(spacing: 0) {
                 if albums.isEmpty {
@@ -113,21 +105,6 @@ public struct AlbumsGridView: View {
                     }
                 }
             }
-            .toolbar {
-                ToolbarItem(placement: .automatic) {
-                    displayModePicker
-                }
-            }
         }
-    }
-
-    private var displayModePicker: some View {
-        Picker("View Mode", selection: $displayMode) {
-            Image(systemName: "square.grid.2x2").tag(AlbumDisplayMode.grid)
-            Image(systemName: "square.stack.3d.up.fill").tag(AlbumDisplayMode.stack)
-        }
-        .pickerStyle(.segmented)
-        .frame(width: 80)
-        .help("Switch between Grid and 3D Cover Stack")
     }
 }
