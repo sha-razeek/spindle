@@ -74,8 +74,8 @@ public struct TurntableDeckView: View {
                             size: tonearmScale
                         )
                         .offset(
-                            x: discSlideOffset + sleeveSize * 0.86 - 40 * tScale,
-                            y: sleeveSize * 0.08 - 68 * tScale
+                            x: discSlideOffset + sleeveSize * 0.86 - 45 * tScale,
+                            y: sleeveSize * 0.08 - 67 * tScale
                         )
                         .allowsHitTesting(false)
                     }
@@ -214,8 +214,8 @@ public struct TurntableDeckView: View {
                     size: tonearmScale
                 )
                 .offset(
-                    x: size * 0.86 - 40 * tScale,
-                    y: size * 0.08 - 68 * tScale
+                    x: size * 0.86 - 45 * tScale,
+                    y: size * 0.08 - 67 * tScale
                 )
                 .allowsHitTesting(false)
             }
