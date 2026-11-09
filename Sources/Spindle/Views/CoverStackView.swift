@@ -297,31 +297,36 @@ public struct CoverStackView: View {
                     .padding(.top, 14)
                     .padding(.bottom, 8)
 
-                    // Scrollable 3D Album List
+                    // Scrollable 3D LP Album Crate (Real stacked LPs with 3D perspective)
                     ScrollView(.vertical, showsIndicators: false) {
-                        LazyVStack(spacing: 6) {
-                            ForEach(albums) { album in
-                                let isSelected = (activeDeckAlbum?.id == album.id)
-                                let isPlayingThis = (currentlyPlayingAlbum?.id == album.id && player.isPlaying)
+                        VStack(spacing: 0) {
+                            Color.clear.frame(height: 14)
 
-                                RackAlbumSlabView(
-                                    album: album,
-                                    isSelected: isSelected,
-                                    isPlaying: isPlayingThis,
-                                    onSelect: {
-                                        handleAlbumSelect(album: album)
-                                    }
-                                )
-                                .equatable()
-                                .id(album.id)
+                            LazyVStack(spacing: 0) {
+                                ForEach(albums) { album in
+                                    let isSelected = (activeDeckAlbum?.id == album.id)
+                                    let isPlayingThis = (currentlyPlayingAlbum?.id == album.id && player.isPlaying)
+
+                                    CrateLPSlabView(
+                                        album: album,
+                                        isSelected: isSelected,
+                                        isPlaying: isPlayingThis,
+                                        onSelect: {
+                                            handleAlbumSelect(album: album)
+                                        }
+                                    )
+                                    .equatable()
+                                    .id(album.id)
+                                }
                             }
+
+                            Color.clear.frame(height: 140)
                         }
-                        .padding(.leading, 12)
-                        .padding(.trailing, 28) // Space for scrubber & index
-                        .padding(.vertical, 8)
+                        .padding(.leading, 8)
+                        .padding(.trailing, 26) // Space for scrubber & index
                     }
                 }
-                .frame(width: 340)
+                .frame(width: 345)
 
                 // Left Alphabet Jump Index overlay
                 HStack {

@@ -11,7 +11,6 @@ public struct TurntableDeckView: View {
     @State private var artworkImage: NSImage?
     @State private var isHoveringJacket: Bool = false
     @State private var isHoveringVinyl: Bool = false
-    @State private var isHoveringDeck: Bool = false
 
     public init(
         album: Album?,
@@ -31,221 +30,180 @@ public struct TurntableDeckView: View {
         player.currentSong ?? album?.representativeSong
     }
 
-    private var backdrop: BackdropPalette {
-        if let song = currentSong {
-            return ArtworkLoader.shared.backdropPalette(for: song, fallbackID: album?.id ?? "turntable")
-        }
-        return ArtworkLoader.shared.defaultBackdropPalette
-    }
-
     public var body: some View {
-        VStack(spacing: 20) {
-            // MARK: - 1. Turntable Plinth / Deck (Matching reference image)
-            ZStack {
-                // Turntable Plinth Surface (Rounded rectangle with warm tone / dynamic palette)
-                plinthBackground
+        GeometryReader { geo in
+            // Calculate dynamic large album size based on available view dimensions
+            let availableH = geo.size.height
+            let availableW = geo.size.width
 
-                // Plinth Top Elements: Sleeve + Vinyl + Tonearm
-                HStack(spacing: 0) {
-                    Spacer(minLength: 24)
+            // Much bigger album scale: ~360pt minimum, up to ~430pt on large screens
+            let sleeveSize: CGFloat = min(max(340, availableH - 220), min(430, availableW - 280))
+            let discSlideOffset: CGFloat = sleeveSize * 0.52
+            let tonearmScale: CGFloat = sleeveSize * 0.90
 
-                    ZStack(alignment: .leading) {
-                        // 1. Vinyl Record (Sliding out to the right of the sleeve)
-                        VinylDiscView(
-                            artwork: artworkImage,
-                            isPlaying: isPlaying,
-                            size: 260,
-                            isBlackVinyl: true
-                        )
-                        .offset(x: 125, y: 0)
-                        .contentShape(Circle())
-                        .onHover { h in isHoveringVinyl = h }
+            VStack(spacing: 24) {
+                Spacer(minLength: 12)
+
+                // MARK: - Big Album Sleeve + Spinning Vinyl + Audiophile Tonearm (No container rectangle)
+                ZStack(alignment: .leading) {
+                    // 1. Classic Deep Black Vinyl Disc (Sliding out to the right)
+                    VinylDiscView(
+                        artwork: artworkImage,
+                        isPlaying: isPlaying,
+                        size: sleeveSize,
+                        isBlackVinyl: true
+                    )
+                    .offset(x: discSlideOffset, y: 0)
+                    .contentShape(Circle())
+                    .onHover { h in isHoveringVinyl = h }
+                    .onTapGesture { onTogglePlay() }
+
+                    // 2. Large Front Album Sleeve / Jacket
+                    albumJacketView(size: sleeveSize)
+                        .contentShape(Rectangle())
+                        .onHover { h in isHoveringJacket = h }
                         .onTapGesture { onTogglePlay() }
 
-                        // 2. Front Album Sleeve / Jacket
-                        albumJacketView
-                            .contentShape(Rectangle())
-                            .onHover { h in isHoveringJacket = h }
-                            .onTapGesture { onTogglePlay() }
-
-                        // 3. Tonearm (Pivots over the record from the right)
-                        TonearmView(
-                            isPlaying: isPlaying,
-                            size: 275
-                        )
-                        .offset(x: 295, y: -22)
-                        .allowsHitTesting(false) // Let clicks through to record/deck
-                    }
-                    .frame(width: 440, height: 280)
-
-                    Spacer(minLength: 24)
+                    // 3. Precision Audiophile Tonearm (Mounted on the right of the vinyl disc)
+                    TonearmView(
+                        isPlaying: isPlaying,
+                        size: tonearmScale
+                    )
+                    .offset(x: discSlideOffset + sleeveSize * 0.44, y: -sleeveSize * 0.16)
+                    .allowsHitTesting(false)
                 }
-            }
-            .frame(maxWidth: 580, minHeight: 330, maxHeight: 360)
-            .padding(.horizontal, 16)
+                .frame(width: sleeveSize + discSlideOffset + 140, height: sleeveSize)
 
-            // MARK: - 2. Album Metadata & Interactive Controls
-            if let album = album {
-                VStack(spacing: 12) {
-                    // Album Title & Artist
-                    VStack(spacing: 4) {
-                        HStack(spacing: 6) {
-                            if isPlaying {
-                                Image(systemName: "speaker.wave.2.fill")
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundColor(.accentColor)
+                // MARK: - Album Details & Playback Transport Controls
+                if let album = album {
+                    VStack(spacing: 12) {
+                        // Title & Artist
+                        VStack(spacing: 4) {
+                            HStack(spacing: 6) {
+                                if isPlaying {
+                                    Image(systemName: "speaker.wave.2.fill")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundColor(.accentColor)
+                                }
+                                Text("NOW PLAYING")
+                                    .font(.system(size: 10.5, weight: .bold))
+                                    .tracking(1.2)
+                                    .foregroundColor(.white.opacity(0.70))
                             }
-                            Text("NOW ON DECK")
-                                .font(.system(size: 10.5, weight: .bold))
-                                .tracking(1)
-                                .foregroundColor(.white.opacity(0.7))
-                        }
 
-                        Text(album.title)
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.white)
-                            .lineLimit(1)
+                            Text(album.title)
+                                .font(.system(size: 22, weight: .bold))
+                                .foregroundColor(.white)
+                                .lineLimit(1)
 
-                        Text(album.artistName)
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.white.opacity(0.85))
-                            .lineLimit(1)
-
-                        HStack(spacing: 8) {
-                            if album.year > 0 {
-                                Text("\(album.year)")
-                            }
-                            Text("•")
-                            Text("\(album.trackCount) tracks")
-                            Text("•")
-                            Text(album.formattedDuration)
-                        }
-                        .font(.system(size: 11))
-                        .foregroundColor(.white.opacity(0.65))
-                    }
-
-                    // Transport Buttons
-                    HStack(spacing: 16) {
-                        // Previous Track
-                        Button {
-                            player.previousTrack()
-                        } label: {
-                            Image(systemName: "backward.fill")
-                                .font(.system(size: 15))
+                            Text(album.artistName)
+                                .font(.system(size: 15, weight: .medium))
                                 .foregroundColor(.white.opacity(0.85))
-                                .frame(width: 32, height: 32)
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(!player.hasPrevious)
+                                .lineLimit(1)
 
-                        // Play / Pause Circle
-                        Button {
-                            onTogglePlay()
-                        } label: {
-                            ZStack {
-                                Circle()
-                                    .fill(Color.accentColor)
-                                    .frame(width: 46, height: 46)
-                                    .shadow(color: Color.accentColor.opacity(0.4), radius: 8, x: 0, y: 3)
-                                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                                    .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .offset(x: isPlaying ? 0 : 1.5)
+                            HStack(spacing: 8) {
+                                if album.year > 0 {
+                                    Text("\(album.year)")
+                                }
+                                Text("•")
+                                Text("\(album.trackCount) tracks")
+                                Text("•")
+                                Text(album.formattedDuration)
                             }
+                            .font(.system(size: 11.5))
+                            .foregroundColor(.white.opacity(0.60))
                         }
-                        .buttonStyle(.plain)
 
-                        // Next Track
-                        Button {
-                            player.nextTrack()
-                        } label: {
-                            Image(systemName: "forward.fill")
-                                .font(.system(size: 15))
-                                .foregroundColor(.white.opacity(0.85))
-                                .frame(width: 32, height: 32)
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(!player.hasNext)
-
-                        Divider()
-                            .frame(height: 20)
-                            .background(Color.white.opacity(0.2))
-
-                        // View Tracklist / Album Details Button
-                        Button {
-                            onSelectDetail()
-                        } label: {
-                            HStack(spacing: 5) {
-                                Image(systemName: "list.bullet")
-                                Text("Tracklist")
+                        // Transport Controls
+                        HStack(spacing: 18) {
+                            // Previous Track
+                            Button {
+                                player.previousTrack()
+                            } label: {
+                                Image(systemName: "backward.fill")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.white.opacity(0.85))
+                                    .frame(width: 36, height: 36)
                             }
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(
-                                Capsule()
-                                    .fill(Color.white.opacity(0.15))
-                                    .overlay(
-                                        Capsule()
-                                            .stroke(Color.white.opacity(0.25), lineWidth: 1)
-                                    )
-                            )
+                            .buttonStyle(.plain)
+                            .disabled(!player.hasPrevious)
+                            .help("Previous Track")
+
+                            // Play / Pause Button
+                            Button {
+                                onTogglePlay()
+                            } label: {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.accentColor)
+                                        .frame(width: 50, height: 50)
+                                        .shadow(color: Color.accentColor.opacity(0.45), radius: 10, x: 0, y: 4)
+                                    Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundColor(.white)
+                                        .offset(x: isPlaying ? 0 : 1.5)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .help(isPlaying ? "Pause" : "Play")
+
+                            // Next Track
+                            Button {
+                                player.nextTrack()
+                            } label: {
+                                Image(systemName: "forward.fill")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.white.opacity(0.85))
+                                    .frame(width: 36, height: 36)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(!player.hasNext)
+                            .help("Next Track")
+
+                            Divider()
+                                .frame(height: 22)
+                                .background(Color.white.opacity(0.25))
+
+                            // Tracklist Button
+                            Button {
+                                onSelectDetail()
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "list.bullet")
+                                    Text("Tracklist")
+                                }
+                                .font(.system(size: 12.5, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 7)
+                                .background(
+                                    Capsule()
+                                        .fill(.ultraThinMaterial)
+                                        .overlay(
+                                            Capsule().stroke(Color.white.opacity(0.25), lineWidth: 1)
+                                        )
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            .help("View Full Album Tracklist")
                         }
-                        .buttonStyle(.plain)
+                        .padding(.top, 4)
                     }
-                    .padding(.top, 4)
+                    .transition(.opacity.combined(with: .scale(scale: 0.96)))
                 }
-                .transition(.opacity.combined(with: .scale(scale: 0.96)))
-            } else {
-                VStack(spacing: 8) {
-                    Text("Select an album from the drawer")
-                        .font(.headline)
-                        .foregroundColor(.white.opacity(0.7))
-                }
+
+                Spacer(minLength: 16)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .task(id: album?.id) {
             await loadArtwork()
         }
     }
 
-    // MARK: - Plinth Background Surface
-    private var plinthBackground: some View {
-        RoundedRectangle(cornerRadius: 24, style: .continuous)
-            .fill(
-                LinearGradient(
-                    colors: [
-                        backdrop.primary.opacity(0.92),
-                        backdrop.mid.opacity(0.85),
-                        backdrop.bottom.opacity(0.92)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .overlay(
-                // 3D tactile deck rim bevel
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.35),
-                                Color.white.opacity(0.10),
-                                Color.black.opacity(0.35)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1.5
-                    )
-            )
-            .shadow(color: Color.black.opacity(0.45), radius: 24, x: 0, y: 12)
-            .animation(.easeInOut(duration: 0.6), value: album?.id)
-    }
-
     // MARK: - Album Jacket Sleeve
-    private var albumJacketView: some View {
+    @ViewBuilder
+    private func albumJacketView(size: CGFloat) -> some View {
         ZStack(alignment: .center) {
             // Artwork Image
             if let img = artworkImage {
@@ -254,44 +212,52 @@ public struct TurntableDeckView: View {
                     .aspectRatio(contentMode: .fill)
             } else {
                 Rectangle()
-                    .fill(Color(white: 0.2))
+                    .fill(Color(white: 0.18))
                 Image(systemName: "music.note")
-                    .font(.system(size: 48))
+                    .font(.system(size: size * 0.22))
                     .foregroundColor(.white.opacity(0.5))
             }
 
-            // Lighting sheen across sleeve
+            // Realistic vinyl sleeve sheen & texture
             LinearGradient(
                 colors: [
-                    Color.white.opacity(0.16),
+                    Color.white.opacity(0.18),
                     Color.clear,
-                    Color.black.opacity(0.25)
+                    Color.black.opacity(0.30)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
+
+            // Tactile spine crease highlight on left edge
+            HStack {
+                Rectangle()
+                    .fill(Color.white.opacity(0.25))
+                    .frame(width: 2)
+                Spacer()
+            }
 
             // Hover play pill
             if isHoveringJacket {
                 ZStack {
                     Circle()
                         .fill(Color.black.opacity(0.65))
-                        .frame(width: 50, height: 50)
+                        .frame(width: 56, height: 56)
                     Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 20, weight: .bold))
+                        .font(.system(size: 22, weight: .bold))
                         .foregroundColor(.white)
                         .offset(x: isPlaying ? 0 : 2)
                 }
                 .transition(.scale.combined(with: .opacity))
             }
         }
-        .frame(width: 250, height: 250)
-        .clipShape(SleeveWithNotchShape(hasNotch: true, cornerRadius: 6, notchDepth: 30, notchHeight: 56))
+        .frame(width: size, height: size)
+        .clipShape(SleeveWithNotchShape(hasNotch: true, cornerRadius: 8, notchDepth: size * 0.12, notchHeight: size * 0.22))
         .overlay(
-            SleeveWithNotchShape(hasNotch: true, cornerRadius: 6, notchDepth: 30, notchHeight: 56)
-                .stroke(Color.white.opacity(0.22), lineWidth: 1)
+            SleeveWithNotchShape(hasNotch: true, cornerRadius: 8, notchDepth: size * 0.12, notchHeight: size * 0.22)
+                .stroke(Color.white.opacity(0.24), lineWidth: 1.2)
         )
-        .shadow(color: Color.black.opacity(0.55), radius: 16, x: -4, y: 8)
+        .shadow(color: Color.black.opacity(0.55), radius: 24, x: -6, y: 12)
     }
 
     private func loadArtwork() async {

@@ -2,317 +2,374 @@ import SwiftUI
 
 public struct TonearmView: View {
     public let isPlaying: Bool
-    public let size: CGFloat // reference scale, default ~300
+    public let size: CGFloat // reference scale, default ~340
 
-    public init(isPlaying: Bool, size: CGFloat = 300) {
+    public init(isPlaying: Bool, size: CGFloat = 340) {
         self.isPlaying = isPlaying
         self.size = size
     }
 
-    // Scale factor relative to base design size (300pt height)
     private var scale: CGFloat {
-        size / 300.0
+        size / 340.0
     }
 
     public var body: some View {
         TimelineView(.animation(paused: !isPlaying)) { timeline in
             let date = timeline.date.timeIntervalSinceReferenceDate
-            // Micro-vibration to simulate needle groove tracking while playing
-            let needleJitter = isPlaying ? (sin(date * 14.0) * 0.18) : 0.0
+            let needleJitter = isPlaying ? (sin(date * 14.0) * 0.16) : 0.0
 
-            // Rest angle: -14 degrees (resting on the armrest clip)
-            // Playing angle: +8.5 degrees (needle resting on outer-mid vinyl grooves)
-            let targetAngle: Double = isPlaying ? (8.5 + needleJitter) : -14.0
+            // Resting angle: -18° (lifted and parked over armrest post)
+            // Playing angle: +6.5° (needle tracking on vinyl grooves)
+            let angle: Double = isPlaying ? (6.5 + needleJitter) : -18.0
 
             ZStack(alignment: .topTrailing) {
-                // MARK: - 1. Recessed Deck Plinth Base (Matching reference image)
-                deckBaseRecess
+                // Stationary Armrest Post & Cueing Mechanism Base
+                armrestBase
+                    .offset(x: -68 * scale, y: 72 * scale)
 
-                // MARK: - 2. Stationary Armrest Post & Cueing Lift
-                armRestPost
-                    .offset(x: -16 * scale, y: 155 * scale)
-
-                // MARK: - 3. Rotating Tonearm Assembly (Pivots around gimbal base)
-                tonearmAssembly
-                    .rotationEffect(.degrees(targetAngle), anchor: UnitPoint(x: 0.76, y: 0.165))
-                    .animation(.spring(response: 0.65, dampingFraction: 0.78), value: isPlaying)
+                // Pivoting Audiophile Tonearm (matches user's reference image)
+                tonearmBody
+                    .rotationEffect(.degrees(angle), anchor: UnitPoint(x: 0.81, y: 0.44))
+                    .animation(.spring(response: 0.70, dampingFraction: 0.78), value: isPlaying)
             }
-            .frame(width: 140 * scale, height: 320 * scale)
+            .frame(width: 320 * scale, height: 160 * scale)
         }
     }
 
-    // MARK: - Deck Base Recess
-    private var deckBaseRecess: some View {
+    // MARK: - Stationary Armrest & Cueing Base
+    private var armrestBase: some View {
         ZStack {
-            // Oblong rounded recess in the turntable plinth
-            RoundedRectangle(cornerRadius: 32 * scale, style: .continuous)
+            // Anti-skate dial base
+            Circle()
                 .fill(
                     LinearGradient(
-                        colors: [
-                            Color.black.opacity(0.12),
-                            Color.black.opacity(0.04),
-                            Color.white.opacity(0.08)
-                        ],
+                        colors: [Color(white: 0.92), Color(white: 0.78), Color(white: 0.65)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
+                .frame(width: 24 * scale, height: 24 * scale)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 32 * scale, style: .continuous)
-                        .stroke(
-                            LinearGradient(
-                                colors: [
-                                    Color.black.opacity(0.20),
-                                    Color.white.opacity(0.15)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1.5 * scale
-                        )
-                )
-                .frame(width: 66 * scale, height: 110 * scale)
-                .offset(x: -8 * scale, y: 8 * scale)
-
-            // Inner Pivot Base Ring
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [
-                            Color(white: 0.35),
-                            Color(white: 0.18),
-                            Color(white: 0.10)
-                        ],
-                        center: .center,
-                        startRadius: 4 * scale,
-                        endRadius: 28 * scale
-                    )
-                )
-                .frame(width: 52 * scale, height: 52 * scale)
-                .overlay(
+                    // Anti-skate dial markings
                     Circle()
-                        .stroke(
-                            LinearGradient(
-                                colors: [Color.white.opacity(0.4), Color.black.opacity(0.6)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1.5 * scale
-                        )
-                )
-                .shadow(color: Color.black.opacity(0.4), radius: 4 * scale, x: 0, y: 2 * scale)
-                .offset(x: -15 * scale, y: 26 * scale)
-        }
-    }
-
-    // MARK: - Armrest Post
-    private var armRestPost: some View {
-        ZStack {
-            // Post column
-            RoundedRectangle(cornerRadius: 2 * scale)
-                .fill(
-                    LinearGradient(
-                        colors: [Color(white: 0.6), Color(white: 0.25)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .frame(width: 5 * scale, height: 18 * scale)
-
-            // U-shaped arm cradle clip
-            HStack(spacing: 4 * scale) {
-                RoundedRectangle(cornerRadius: 1 * scale)
-                    .fill(Color(white: 0.2))
-                    .frame(width: 2.5 * scale, height: 8 * scale)
-                Spacer()
-                RoundedRectangle(cornerRadius: 1 * scale)
-                    .fill(Color(white: 0.2))
-                    .frame(width: 2.5 * scale, height: 8 * scale)
-            }
-            .frame(width: 14 * scale)
-            .offset(y: -9 * scale)
-        }
-        .shadow(color: Color.black.opacity(0.25), radius: 2 * scale, x: 1 * scale, y: 1 * scale)
-    }
-
-    // MARK: - Pivoting Tonearm Assembly
-    private var tonearmAssembly: some View {
-        ZStack {
-            // Drop Shadow cast by the tonearm onto the deck
-            tonearmSilhouette
-                .foregroundColor(.black.opacity(isPlaying ? 0.35 : 0.22))
-                .blur(radius: isPlaying ? 3.5 * scale : 6.0 * scale)
-                .offset(x: isPlaying ? 4 * scale : 8 * scale, y: isPlaying ? 4 * scale : 9 * scale)
-
-            // Actual metallic tonearm body
-            ZStack {
-                // 1. Rear Counterweight (cylindrical weight behind the pivot)
-                VStack(spacing: 0) {
-                    RoundedRectangle(cornerRadius: 4 * scale)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color(white: 0.35),
-                                    Color(white: 0.15),
-                                    Color(white: 0.08)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 20 * scale, height: 32 * scale)
+                        .stroke(Color.black.opacity(0.35), lineWidth: 1 * scale)
                         .overlay(
-                            // Calibration tracking weight scale lines
-                            HStack(spacing: 2 * scale) {
-                                ForEach(0..<4) { _ in
+                            VStack(spacing: 2 * scale) {
+                                ForEach(0..<3) { _ in
                                     Rectangle()
-                                        .fill(Color.white.opacity(0.35))
-                                        .frame(width: 0.8 * scale, height: 12 * scale)
+                                        .fill(Color.black.opacity(0.6))
+                                        .frame(width: 1 * scale, height: 3 * scale)
                                 }
                             }
                         )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 4 * scale)
-                                .stroke(Color.white.opacity(0.2), lineWidth: 0.75 * scale)
-                        )
-                    Spacer()
-                }
-                .offset(x: 23 * scale, y: 12 * scale)
+                )
+                .shadow(color: Color.black.opacity(0.25), radius: 2 * scale, x: 0, y: 1.5 * scale)
+                .offset(x: 10 * scale, y: 32 * scale)
 
-                // 2. Center Gimbal Pivot Bell / Bearing Ring
-                Circle()
+            // Curved cueing lift lever with black rubber handle
+            Path { path in
+                path.move(to: CGPoint(x: 0, y: 18 * scale))
+                path.addQuadCurve(
+                    to: CGPoint(x: -14 * scale, y: -4 * scale),
+                    control: CGPoint(x: -8 * scale, y: 6 * scale)
+                )
+            }
+            .stroke(Color(white: 0.45), style: StrokeStyle(lineWidth: 2.2 * scale, lineCap: .round))
+
+            // Cueing lever rubber tip
+            Capsule()
+                .fill(Color(white: 0.15))
+                .frame(width: 5 * scale, height: 10 * scale)
+                .rotationEffect(.degrees(-35))
+                .offset(x: -16 * scale, y: -6 * scale)
+
+            // Armrest post with U-clip
+            VStack(spacing: 0) {
+                // U-cradle clip
+                HStack(spacing: 6 * scale) {
+                    RoundedRectangle(cornerRadius: 1 * scale)
+                        .fill(Color(white: 0.18))
+                        .frame(width: 2.5 * scale, height: 8 * scale)
+                    Spacer()
+                    RoundedRectangle(cornerRadius: 1 * scale)
+                        .fill(Color(white: 0.18))
+                        .frame(width: 2.5 * scale, height: 8 * scale)
+                }
+                .frame(width: 14 * scale)
+
+                // Stem post
+                RoundedRectangle(cornerRadius: 1.5 * scale)
+                    .fill(Color(white: 0.65))
+                    .frame(width: 5 * scale, height: 16 * scale)
+            }
+            .offset(y: 4 * scale)
+        }
+    }
+
+    // MARK: - Pivoting Tonearm Assembly
+    private var tonearmBody: some View {
+        ZStack {
+            // Drop shadow cast by tonearm
+            tonearmSilhouette
+                .foregroundColor(.black.opacity(isPlaying ? 0.40 : 0.22))
+                .blur(radius: isPlaying ? 5 * scale : 9 * scale)
+                .offset(x: isPlaying ? 5 * scale : 10 * scale, y: isPlaying ? 7 * scale : 14 * scale)
+
+            HStack(spacing: 0) {
+                // 1. Headshell & Cartridge (Far Left)
+                headshellAssembly
+                    .offset(x: 2 * scale)
+
+                // 2. Collar
+                RoundedRectangle(cornerRadius: 1.5 * scale)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(white: 0.88), Color(white: 0.65), Color(white: 0.85)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: 7 * scale, height: 11 * scale)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 1.5 * scale)
+                            .stroke(Color.white.opacity(0.35), lineWidth: 0.5 * scale)
+                    )
+
+                // 3. Satin Silver Aluminum Arm Wand
+                Rectangle()
                     .fill(
                         LinearGradient(
                             colors: [
-                                Color(white: 0.85),
-                                Color(white: 0.45),
-                                Color(white: 0.25)
+                                Color(white: 0.98),
+                                Color(white: 0.84),
+                                Color(white: 0.68),
+                                Color(white: 0.92)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: 145 * scale, height: 8.5 * scale)
+                    .overlay(
+                        // Specular cylindrical highlight line
+                        VStack {
+                            Rectangle()
+                                .fill(Color.white.opacity(0.65))
+                                .frame(height: 1.5 * scale)
+                            Spacer()
+                        }
+                    )
+
+                // 4. Gimbal Pivot & Counterweight Assembly (Far Right)
+                gimbalAndCounterweight
+            }
+        }
+    }
+
+    // MARK: - Headshell & Cartridge Detail (Matches exact reference photo)
+    private var headshellAssembly: some View {
+        ZStack(alignment: .leading) {
+            // Bright Orange Audio-Technica / Ortofon style Cartridge underneath
+            HStack(spacing: 0) {
+                // Stylus body tip
+                RoundedRectangle(cornerRadius: 2 * scale)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 0.98, green: 0.55, blue: 0.15),
+                                Color(red: 0.92, green: 0.42, blue: 0.10)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
-                    .frame(width: 28 * scale, height: 28 * scale)
+                    .frame(width: 14 * scale, height: 14 * scale)
                     .overlay(
+                        // Stylus cantilever pin
                         Circle()
-                            .stroke(Color.white.opacity(0.6), lineWidth: 1 * scale)
+                            .fill(Color(white: 0.85))
+                            .frame(width: 2.5 * scale, height: 2.5 * scale)
+                            .offset(x: -3 * scale, y: 3 * scale)
                     )
-                    .shadow(color: Color.black.opacity(0.3), radius: 3 * scale, x: 1 * scale, y: 2 * scale)
-                    .offset(x: 23 * scale, y: 39 * scale)
 
-                // 3. Brushed Aluminum Tonearm Wand
-                // Straight silver cylindrical tube extending down and left
-                Path { path in
-                    let startX = 106.0 * scale
-                    let startY = 53.0 * scale
-                    let endX = 38.0 * scale
-                    let endY = 245.0 * scale
-                    path.move(to: CGPoint(x: startX, y: startY))
-                    path.addLine(to: CGPoint(x: endX, y: endY))
+                // Rear cartridge block with red/green/blue wire terminals
+                Rectangle()
+                    .fill(Color(white: 0.15))
+                    .frame(width: 16 * scale, height: 12 * scale)
+                    .overlay(
+                        HStack(spacing: 1 * scale) {
+                            Circle().fill(Color.red).frame(width: 2 * scale)
+                            Circle().fill(Color.green).frame(width: 2 * scale)
+                            Circle().fill(Color.yellow).frame(width: 2 * scale)
+                        }
+                        .offset(x: 4 * scale, y: 2 * scale)
+                    )
+            }
+            .offset(x: 0, y: 3 * scale)
+
+            // Off-White Matte Headshell Housing (Top shell)
+            ZStack(alignment: .topTrailing) {
+                RoundedRectangle(cornerRadius: 3 * scale, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(white: 0.94), Color(white: 0.86), Color(white: 0.78)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 44 * scale, height: 19 * scale)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 3 * scale, style: .continuous)
+                            .stroke(Color.white.opacity(0.4), lineWidth: 0.75 * scale)
+                    )
+
+                // Top Cutout Slot revealing mounting screws
+                ZStack {
+                    RoundedRectangle(cornerRadius: 2 * scale)
+                        .fill(Color(white: 0.25))
+                        .frame(width: 24 * scale, height: 11 * scale)
+
+                    // Two mounting screws with red/yellow washers (as in photo)
+                    HStack(spacing: 5 * scale) {
+                        // Left screw with orange washer
+                        Circle()
+                            .fill(Color(red: 0.95, green: 0.45, blue: 0.15))
+                            .frame(width: 6 * scale, height: 6 * scale)
+                            .overlay(
+                                Circle()
+                                    .fill(Color(white: 0.85))
+                                    .frame(width: 3.5 * scale, height: 3.5 * scale)
+                                    .overlay(Rectangle().fill(Color.black.opacity(0.6)).frame(width: 2 * scale, height: 0.8 * scale))
+                            )
+
+                        // Right screw with red washer
+                        Circle()
+                            .fill(Color(red: 0.88, green: 0.22, blue: 0.20))
+                            .frame(width: 6 * scale, height: 6 * scale)
+                            .overlay(
+                                Circle()
+                                    .fill(Color(white: 0.85))
+                                    .frame(width: 3.5 * scale, height: 3.5 * scale)
+                                    .overlay(Rectangle().fill(Color.black.opacity(0.6)).frame(width: 2 * scale, height: 0.8 * scale))
+                            )
+                    }
                 }
-                .stroke(
-                    LinearGradient(
-                        colors: [
-                            Color(white: 0.98),
-                            Color(white: 0.78),
-                            Color(white: 0.60),
-                            Color(white: 0.92)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    style: StrokeStyle(lineWidth: 5.5 * scale, lineCap: .round)
-                )
+                .offset(x: -8 * scale, y: 4 * scale)
 
-                // 4. Offset Angled Connector Collar
+                // Downward / Forward angled finger cue lift tab
                 Path { path in
-                    let p1 = CGPoint(x: 38.0 * scale, y: 245.0 * scale)
-                    let p2 = CGPoint(x: 28.0 * scale, y: 268.0 * scale)
-                    path.move(to: p1)
-                    path.addLine(to: p2)
+                    path.move(to: CGPoint(x: 24 * scale, y: 19 * scale))
+                    path.addLine(to: CGPoint(x: 22 * scale, y: 28 * scale))
+                    path.addLine(to: CGPoint(x: 25 * scale, y: 28 * scale))
+                    path.addLine(to: CGPoint(x: 27 * scale, y: 19 * scale))
                 }
-                .stroke(
-                    Color(white: 0.18),
-                    style: StrokeStyle(lineWidth: 6.5 * scale, lineCap: .square)
-                )
+                .fill(Color(white: 0.88))
+            }
+            .offset(x: 4 * scale, y: -2 * scale)
+        }
+        .frame(width: 52 * scale)
+    }
 
-                // 5. Matte Black Headshell & Cartridge (Angled to ride tangent to groove)
-                headshellView
-                    .offset(x: -36 * scale, y: 262 * scale)
+    // MARK: - Gimbal & Counterweight Assembly (Far Right)
+    private var gimbalAndCounterweight: some View {
+        HStack(spacing: 0) {
+            // Gimbal Bearing Yoke (Organic off-white cast housing)
+            ZStack {
+                // Base yoke ring
+                RoundedRectangle(cornerRadius: 6 * scale, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(white: 0.92), Color(white: 0.80), Color(white: 0.68)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 36 * scale, height: 32 * scale)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6 * scale, style: .continuous)
+                            .stroke(Color.white.opacity(0.4), lineWidth: 1 * scale)
+                    )
+
+                // Horizontal pivot bearing pin screw
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(white: 0.85), Color(white: 0.45)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: 10 * scale, height: 10 * scale)
+                    .overlay(
+                        Circle().stroke(Color.black.opacity(0.4), lineWidth: 0.75 * scale)
+                    )
+            }
+
+            // Knurled Aluminum Counterweight Cylinder
+            ZStack(alignment: .trailing) {
+                HStack(spacing: 0) {
+                    // Knurled Ring Section
+                    Rectangle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(white: 0.90), Color(white: 0.72), Color(white: 0.60)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .frame(width: 10 * scale, height: 26 * scale)
+                        .overlay(
+                            // Fine knurl texture stripes
+                            HStack(spacing: 1.5 * scale) {
+                                ForEach(0..<5) { _ in
+                                    Rectangle()
+                                        .fill(Color.black.opacity(0.25))
+                                        .frame(width: 0.75 * scale, height: 26 * scale)
+                                }
+                            }
+                        )
+
+                    // Main Counterweight Barrel
+                    RoundedRectangle(cornerRadius: 2 * scale)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(white: 0.96), Color(white: 0.82), Color(white: 0.65)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .frame(width: 16 * scale, height: 28 * scale)
+                }
+
+                // Vibrant Orange End Cap Button (Signature detail from reference image)
+                RoundedRectangle(cornerRadius: 2 * scale)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 0.98, green: 0.52, blue: 0.12),
+                                Color(red: 0.88, green: 0.38, blue: 0.08)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 6.5 * scale, height: 16 * scale)
+                    .offset(x: 6 * scale)
             }
         }
     }
 
-    // MARK: - Headshell & Cartridge Detail
-    private var headshellView: some View {
-        ZStack(alignment: .topTrailing) {
-            // Main rectangular headshell block
-            RoundedRectangle(cornerRadius: 3.5 * scale, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color(white: 0.22),
-                            Color(white: 0.12),
-                            Color(white: 0.08)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(width: 22 * scale, height: 34 * scale)
-                .rotationEffect(.degrees(24))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 3.5 * scale, style: .continuous)
-                        .stroke(Color.white.opacity(0.18), lineWidth: 0.75 * scale)
-                        .rotationEffect(.degrees(24))
-                )
-
-            // Stylus cartridge tip housing
-            Rectangle()
-                .fill(
-                    LinearGradient(
-                        colors: [Color.orange.opacity(0.85), Color.red.opacity(0.7)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .frame(width: 8 * scale, height: 5 * scale)
-                .rotationEffect(.degrees(24))
-                .offset(x: -8 * scale, y: 27 * scale)
-
-            // Finger lift cueing tab on the right edge
-            Path { path in
-                path.move(to: CGPoint(x: 18 * scale, y: 6 * scale))
-                path.addQuadCurve(
-                    to: CGPoint(x: 28 * scale, y: 0),
-                    control: CGPoint(x: 25 * scale, y: 1 * scale)
-                )
-            }
-            .stroke(Color(white: 0.4), style: StrokeStyle(lineWidth: 1.5 * scale, lineCap: .round))
-        }
-    }
-
-    // MARK: - Silhouette for soft realistic drop shadow
+    // MARK: - Silhouette for realistic soft drop shadow
     private var tonearmSilhouette: some View {
-        ZStack {
-            Circle()
-                .frame(width: 28 * scale, height: 28 * scale)
-                .offset(x: 23 * scale, y: 39 * scale)
-
-            Path { path in
-                let startX = 106.0 * scale
-                let startY = 53.0 * scale
-                let endX = 28.0 * scale
-                let endY = 268.0 * scale
-                path.move(to: CGPoint(x: startX, y: startY))
-                path.addLine(to: CGPoint(x: endX, y: endY))
-            }
-            .stroke(Color.black, style: StrokeStyle(lineWidth: 7 * scale, lineCap: .round))
-
-            RoundedRectangle(cornerRadius: 3.5 * scale)
-                .frame(width: 22 * scale, height: 34 * scale)
-                .rotationEffect(.degrees(24))
-                .offset(x: -36 * scale, y: 262 * scale)
+        HStack(spacing: 0) {
+            RoundedRectangle(cornerRadius: 3 * scale)
+                .frame(width: 48 * scale, height: 18 * scale)
+            Rectangle()
+                .frame(width: 152 * scale, height: 8 * scale)
+            RoundedRectangle(cornerRadius: 6 * scale)
+                .frame(width: 36 * scale, height: 32 * scale)
+            RoundedRectangle(cornerRadius: 2 * scale)
+                .frame(width: 26 * scale, height: 28 * scale)
         }
     }
 }
