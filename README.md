@@ -49,11 +49,11 @@ Spindle connects directly to your existing Apple Music library using macOS's nat
 </p>
 
 - **Library Views**:
-  - **3D Covers**: Interactive physical vinyl drawer browser.
+  - **Recently Added**: Chronological showcase for newest additions with one-click view switching.
+  - **3D Covers**: Interactive physical vinyl drawer browser with turntable deck.
   - **Albums**: Responsive cover grid with instant album detail inspection.
   - **Songs**: Searchable, sortable list view with real-time filtering.
   - **Artists**: Two-pane discography navigator.
-  - **Playlists**: Preserves custom playlist order directly from Apple Music.
 - **Media Keys & Control Center**: Full integration with `MPRemoteCommandCenter` (Play/Pause, Next, Previous, Scrubbing) and Touch Bar/keyboard media keys (F7, F8, F9).
 - **Now Playing Info Center**: Publishes active song title, artist, album, duration, elapsed playback time, and artwork to macOS Control Center and lock screen.
 - **Reveal in Finder**: Quickly jump straight to the source audio file in Finder.
