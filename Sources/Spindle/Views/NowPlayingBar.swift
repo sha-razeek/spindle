@@ -11,18 +11,12 @@ public struct NowPlayingBar: View {
     @State private var isHoveringThumbnail: Bool = false
     @State private var isHoveringScrubber: Bool = false
 
-    // Volume control expansion state (matching Apple Music Image 1 vs Image 2)
-    @State private var isHoveringVolume: Bool = false
-    @State private var isDraggingVolume: Bool = false
-    @State private var isVolumePinned: Bool = false
+    // Volume control expansion state (only expanded when clicked)
+    @State private var isVolumeExpanded: Bool = false
 
     public init(player: AudioPlayer, onExpand: (() -> Void)? = nil) {
         self.player = player
         self.onExpand = onExpand
-    }
-
-    private var isVolumeExpanded: Bool {
-        isHoveringVolume || isDraggingVolume || isVolumePinned
     }
 
     public var body: some View {
@@ -253,22 +247,18 @@ public struct NowPlayingBar: View {
                             .gesture(
                                 DragGesture(minimumDistance: 0)
                                     .onChanged { val in
-                                        isDraggingVolume = true
                                         if player.isMuted { player.isMuted = false }
                                         let newVol = Float(max(0.0, min(1.0, val.location.x / width)))
                                         player.volume = newVol
-                                    }
-                                    .onEnded { _ in
-                                        isDraggingVolume = false
                                     }
                             )
                         }
                         .frame(width: 64, height: 16)
 
-                        // Speaker Icon Button
+                        // Speaker Icon Button (clicking collapses volume capsule)
                         Button {
-                            withAnimation(.easeInOut(duration: 0.15)) {
-                                player.isMuted.toggle()
+                            withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
+                                isVolumeExpanded = false
                             }
                         } label: {
                             Image(systemName: volumeIcon)
@@ -277,7 +267,7 @@ public struct NowPlayingBar: View {
                                 .frame(width: 18, height: 18)
                         }
                         .buttonStyle(.plain)
-                        .help(player.isMuted ? "Unmute" : "Mute")
+                        .help("Close volume control")
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
@@ -290,9 +280,6 @@ public struct NowPlayingBar: View {
                             .stroke(Color.primary.opacity(0.06), lineWidth: 0.5)
                     )
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                    .onHover { hovering in
-                        isHoveringVolume = hovering
-                    }
                 } else {
                     // MARK: - Idle Icons: Queue & Speaker Icon (Image 2)
                     HStack(spacing: 8) {
@@ -311,10 +298,10 @@ public struct NowPlayingBar: View {
                             QueuePopoverView(player: player)
                         }
 
-                        // Speaker button (hovering expands the volume pill)
+                        // Speaker button (clicking expands the volume pill)
                         Button {
                             withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
-                                isVolumePinned.toggle()
+                                isVolumeExpanded = true
                             }
                         } label: {
                             Image(systemName: volumeIcon)
@@ -323,12 +310,7 @@ public struct NowPlayingBar: View {
                                 .frame(width: 22, height: 22)
                         }
                         .buttonStyle(.plain)
-                        .help("Volume (Click to toggle slider, Hover to expand)")
-                        .onHover { hovering in
-                            withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
-                                isHoveringVolume = hovering
-                            }
-                        }
+                        .help("Volume (Click to adjust)")
                     }
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
                 }
