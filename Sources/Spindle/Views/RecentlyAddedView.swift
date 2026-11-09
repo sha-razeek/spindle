@@ -16,7 +16,7 @@ public struct RecentlyAddedView: View {
     let songs: [Song]
     @ObservedObject var player: AudioPlayer
 
-    @State private var displayMode: RecentlyAddedDisplayMode = .grid
+    @Binding var displayMode: RecentlyAddedDisplayMode
     @State private var selectedAlbum: Album?
     @State private var hoveredAlbumID: String?
     @State private var hoveredSongID: String?
@@ -25,10 +25,16 @@ public struct RecentlyAddedView: View {
         GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 20)
     ]
 
-    public init(albums: [Album], songs: [Song], player: AudioPlayer) {
+    public init(
+        albums: [Album],
+        songs: [Song],
+        player: AudioPlayer,
+        displayMode: Binding<RecentlyAddedDisplayMode> = .constant(.grid)
+    ) {
         self.albums = albums
         self.songs = songs
         self.player = player
+        self._displayMode = displayMode
     }
 
     public var body: some View {
@@ -45,18 +51,6 @@ public struct RecentlyAddedView: View {
                     albumsGridView
                 case .stack:
                     CoverStackView(albums: albums, player: player)
-                }
-            }
-            .toolbar {
-                ToolbarItem(placement: .automatic) {
-                    Picker("View Mode", selection: $displayMode) {
-                        Image(systemName: "list.bullet").tag(RecentlyAddedDisplayMode.songs)
-                        Image(systemName: "square.grid.2x2").tag(RecentlyAddedDisplayMode.grid)
-                        Image(systemName: "square.stack.3d.up.fill").tag(RecentlyAddedDisplayMode.stack)
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 110)
-                    .help("Switch between Recently Added Songs, Album Grid, and 3D Stack")
                 }
             }
         }

@@ -21,6 +21,7 @@ public struct ContentView: View {
     @StateObject private var player = AudioPlayer.shared
 
     @State private var selectedItem: NavigationItem? = .recentlyAdded
+    @State private var recentlyAddedDisplayMode: RecentlyAddedDisplayMode = .grid
     @State private var showExpandedNowPlaying: Bool = false
 
     private let appleMusicBlue = Color(red: 0.004, green: 0.471, blue: 0.941)
@@ -157,7 +158,8 @@ public struct ContentView: View {
                                 RecentlyAddedView(
                                     albums: library.recentlyAddedAlbums,
                                     songs: library.recentlyAddedSongs,
-                                    player: player
+                                    player: player,
+                                    displayMode: $recentlyAddedDisplayMode
                                 )
                             case .artists:
                                 ArtistsView(artists: library.artists, player: player)
@@ -186,9 +188,14 @@ public struct ContentView: View {
                 ToolbarItemGroup(placement: .automatic) {
                     if selectedItem == .songs || selectedItem == .albums || selectedItem == .coverStack {
                         ToolbarViewModeSwitcher(selectedItem: $selectedItem)
+                    } else if selectedItem == .recentlyAdded || selectedItem == nil {
+                        ToolbarRecentlyAddedSwitcher(displayMode: $recentlyAddedDisplayMode)
                     }
 
-                    ToolbarSearchField(query: $library.searchQuery)
+                    ToolbarSearchField(
+                        query: $library.searchQuery,
+                        prompt: (selectedItem == .recentlyAdded || selectedItem == nil) ? "Find in Recently Added" : "Find in Library"
+                    )
                 }
             }
         }
@@ -333,9 +340,72 @@ struct ToolbarViewModeSwitcher: View {
     }
 }
 
+// MARK: - Apple Music Styled Recently Added View Mode Switcher
+struct ToolbarRecentlyAddedSwitcher: View {
+    @Binding var displayMode: RecentlyAddedDisplayMode
+
+    var body: some View {
+        HStack(spacing: 2) {
+            switcherButton(icon: "list.bullet", mode: .songs, help: "Song List") {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    displayMode = .songs
+                }
+            }
+
+            switcherButton(icon: "square.grid.2x2", mode: .grid, help: "Album Grid") {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    displayMode = .grid
+                }
+            }
+
+            switcherButton(icon: "square.stack.3d.up.fill", mode: .stack, help: "3D Covers") {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    displayMode = .stack
+                }
+            }
+        }
+        .padding(2.5)
+        .background(
+            Capsule()
+                .fill(Color.primary.opacity(0.06))
+        )
+        .overlay(
+            Capsule()
+                .stroke(Color.primary.opacity(0.08), lineWidth: 0.8)
+        )
+        .frame(height: 28)
+    }
+
+    @ViewBuilder
+    private func switcherButton(icon: String, mode: RecentlyAddedDisplayMode, help: String, action: @escaping () -> Void) -> some View {
+        let isSelected = displayMode == mode
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
+                .foregroundColor(isSelected ? .primary : .secondary)
+                .frame(width: 28, height: 23)
+                .background(
+                    Group {
+                        if isSelected {
+                            Capsule()
+                                .fill(Color(NSColor.controlBackgroundColor))
+                                .shadow(color: Color.black.opacity(0.12), radius: 2, x: 0, y: 1)
+                        } else {
+                            Color.clear
+                        }
+                    }
+                )
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .help(help)
+    }
+}
+
 // MARK: - Apple Music Styled Search Field (Capsule with very rounded corners)
 struct ToolbarSearchField: View {
     @Binding var query: String
+    var prompt: String = "Find in Library"
     @FocusState private var isFocused: Bool
 
     var body: some View {
@@ -344,7 +414,7 @@ struct ToolbarSearchField: View {
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(.secondary)
 
-            TextField("Find in Library", text: $query)
+            TextField(prompt, text: $query)
                 .textFieldStyle(.plain)
                 .font(.system(size: 12.5))
                 .focused($isFocused)
