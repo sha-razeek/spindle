@@ -12,14 +12,23 @@ public struct NowPlayingBar: View {
     @State private var isHoveringScrubber: Bool = false
     @State private var showLyrics: Bool = false
 
+    // Volume control expansion state (matching Apple Music Image 1 vs Image 2)
+    @State private var isHoveringVolume: Bool = false
+    @State private var isDraggingVolume: Bool = false
+    @State private var isVolumePinned: Bool = false
+
     public init(player: AudioPlayer, onExpand: (() -> Void)? = nil) {
         self.player = player
         self.onExpand = onExpand
     }
 
+    private var isVolumeExpanded: Bool {
+        isHoveringVolume || isDraggingVolume || isVolumePinned
+    }
+
     public var body: some View {
         HStack(spacing: 12) {
-            // MARK: - Left: Transport Controls (Compact Apple Music layout)
+            // MARK: - Left: Transport Controls (Shuffle, Prev, Play/Pause, Next, Repeat)
             HStack(spacing: 11) {
                 // Shuffle
                 Button {
@@ -81,27 +90,27 @@ public struct NowPlayingBar: View {
                 .buttonStyle(.plain)
                 .help(player.repeatMode.rawValue)
             }
-            .frame(width: 118, alignment: .leading)
+            .frame(width: 115, alignment: .leading)
 
             Spacer(minLength: 4)
 
-            // MARK: - Center: Track Info Thumbnail & Live Scrubber
-            HStack(spacing: 8) {
+            // MARK: - Center: Artwork, Track Info & Continuous Scrubber (Apple Music layout)
+            HStack(spacing: 9) {
                 if let song = player.currentSong {
-                    // Artwork Thumbnail
+                    // Artwork Thumbnail with hover expand hint
                     ZStack {
-                        ArtworkView(song: song, cornerRadius: 4, size: 32)
+                        ArtworkView(song: song, cornerRadius: 5, size: 34)
                             .shadow(color: Color.black.opacity(0.18), radius: 3, x: 0, y: 1.5)
 
                         if isHoveringThumbnail {
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(Color.black.opacity(0.40))
+                            RoundedRectangle(cornerRadius: 5)
+                                .fill(Color.black.opacity(0.35))
                             Image(systemName: "arrow.up.left.and.arrow.down.right")
                                 .font(.system(size: 9.5, weight: .bold))
                                 .foregroundColor(.white)
                         }
                     }
-                    .frame(width: 32, height: 32)
+                    .frame(width: 34, height: 34)
                     .contentShape(Rectangle())
                     .onHover { isHoveringThumbnail = $0 }
                     .onTapGesture {
@@ -110,80 +119,78 @@ public struct NowPlayingBar: View {
                     .help("Click to expand Now Playing view")
 
                     VStack(alignment: .leading, spacing: 2) {
-                        // Title & Artist
-                        HStack(spacing: 5) {
-                            Text(song.title)
-                                .font(.system(size: 11.5, weight: .semibold))
-                                .foregroundColor(.primary)
-                                .lineLimit(1)
+                        // Title
+                        Text(song.title)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.primary)
+                            .lineLimit(1)
+                            .contentShape(Rectangle())
+                            .onTapGesture { onExpand?() }
 
-                            Text("•")
-                                .font(.system(size: 8))
-                                .foregroundColor(.secondary.opacity(0.6))
+                        // Artist
+                        Text(song.artistName)
+                            .font(.system(size: 10.5, weight: .regular))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                            .contentShape(Rectangle())
+                            .onTapGesture { onExpand?() }
 
-                            Text(song.artistName)
-                                .font(.system(size: 10.5))
-                                .foregroundColor(.secondary)
-                                .lineLimit(1)
-                        }
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            onExpand?()
-                        }
+                        // Sleek Progress Scrubber running underneath (matching Image 1 & 2)
+                        GeometryReader { geo in
+                            let totalWidth = geo.size.width
+                            let progress = scrubberProgress
 
-                        // Sleek Compact Scrubber Bar
-                        HStack(spacing: 6) {
-                            Text(isDraggingScrubber ? formatSeconds(scrubTime) : player.formattedCurrentTime)
-                                .font(.system(size: 8.5, design: .monospaced))
-                                .foregroundColor(.secondary)
-                                .frame(width: 28, alignment: .trailing)
+                            ZStack(alignment: .leading) {
+                                // Background track
+                                Capsule()
+                                    .fill(Color.primary.opacity(0.18))
+                                    .frame(height: isHoveringScrubber || isDraggingScrubber ? 3.5 : 2.5)
 
-                            // Scrubber Slider
-                            Slider(
-                                value: Binding(
-                                    get: { isDraggingScrubber ? scrubTime : player.currentTime },
-                                    set: { newValue in
-                                        scrubTime = newValue
+                                // Filled track
+                                Capsule()
+                                    .fill(Color.primary.opacity(0.85))
+                                    .frame(width: max(0, totalWidth * CGFloat(progress)), height: isHoveringScrubber || isDraggingScrubber ? 3.5 : 2.5)
+                            }
+                            .frame(maxHeight: .infinity, alignment: .center)
+                            .contentShape(Rectangle())
+                            .gesture(
+                                DragGesture(minimumDistance: 0)
+                                    .onChanged { value in
+                                        isDraggingScrubber = true
+                                        let ratio = max(0.0, min(1.0, Double(value.location.x / totalWidth)))
+                                        scrubTime = ratio * max(1.0, player.duration)
                                     }
-                                ),
-                                in: 0...max(1.0, player.duration),
-                                onEditingChanged: { editing in
-                                    isDraggingScrubber = editing
-                                    if !editing {
-                                        player.seek(to: scrubTime)
-                                    } else {
-                                        scrubTime = player.currentTime
+                                    .onEnded { value in
+                                        let ratio = max(0.0, min(1.0, Double(value.location.x / totalWidth)))
+                                        let target = ratio * max(1.0, player.duration)
+                                        player.seek(to: target)
+                                        isDraggingScrubber = false
                                     }
-                                }
                             )
-                            .accentColor(.accentColor)
-                            .frame(maxWidth: 160)
-                            .onHover { h in isHoveringScrubber = h }
-
-                            Text(player.formattedRemainingTime)
-                                .font(.system(size: 8.5, design: .monospaced))
-                                .foregroundColor(.secondary)
-                                .frame(width: 30, alignment: .leading)
                         }
+                        .frame(height: 7)
+                        .onHover { isHoveringScrubber = $0 }
+                        .help(isDraggingScrubber ? formatSeconds(scrubTime) : "\(player.formattedCurrentTime) / \(formatSeconds(player.duration))")
                     }
+                    .frame(maxWidth: 240, alignment: .leading)
                 } else {
                     // Empty / Not Playing state
                     HStack(spacing: 8) {
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
                             .fill(Color.secondary.opacity(0.12))
-                            .frame(width: 32, height: 32)
+                            .frame(width: 34, height: 34)
                             .overlay(
                                 Image(systemName: "music.note")
                                     .font(.system(size: 14))
                                     .foregroundColor(.secondary.opacity(0.7))
                             )
 
-                        VStack(alignment: .leading, spacing: 1) {
+                        VStack(alignment: .leading, spacing: 2) {
                             Text("Not Playing")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: 11.5, weight: .semibold))
                                 .foregroundColor(.secondary)
                             Text("Select a track to start listening")
-                                .font(.system(size: 9.5))
+                                .font(.system(size: 10))
                                 .foregroundColor(.secondary.opacity(0.7))
                         }
                     }
@@ -193,60 +200,155 @@ public struct NowPlayingBar: View {
 
             Spacer(minLength: 4)
 
-            // MARK: - Right: Lyrics, Queue & Volume (AirPlay button removed per user request)
-            HStack(spacing: 12) {
-                // Lyrics button
-                Button {
-                    showLyrics.toggle()
-                    onExpand?()
-                } label: {
-                    Image(systemName: "quote.bubble")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(showLyrics ? .accentColor : .secondary)
-                }
-                .buttonStyle(.plain)
-                .help("Lyrics")
-
-                // Up Next Queue button
-                Button {
-                    showQueuePopover.toggle()
-                } label: {
-                    Image(systemName: "list.bullet")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(showQueuePopover ? .accentColor : .secondary)
-                        .padding(4)
-                        .background(
-                            Circle()
-                                .fill(showQueuePopover ? Color.accentColor.opacity(0.18) : Color.clear)
-                        )
-                }
-                .buttonStyle(.plain)
-                .help("Up Next Queue")
-                .popover(isPresented: $showQueuePopover, arrowEdge: .top) {
-                    QueuePopoverView(player: player)
-                }
-
-                // Volume icon + slider
-                HStack(spacing: 5) {
-                    Button {
-                        player.isMuted.toggle()
-                    } label: {
-                        Image(systemName: volumeIcon)
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                            .frame(width: 14)
+            // MARK: - Right: Options, Lyrics, Queue & Volume Control Capsule (Image 1 & 2)
+            HStack(spacing: 8) {
+                // More Options (...) button
+                Menu {
+                    if let song = player.currentSong {
+                        Text(song.title).font(.headline)
+                        Text(song.artistName).font(.subheadline)
+                        Divider()
+                        if let url = song.location {
+                            Button("Show Original in Finder") {
+                                NSWorkspace.shared.activateFileViewerSelecting([url])
+                            }
+                        }
+                        Button("Copy Song Name") {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString("\(song.artistName) - \(song.title)", forType: .string)
+                        }
                     }
-                    .buttonStyle(.plain)
-                    .help(player.isMuted ? "Unmute" : "Mute")
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.primary.opacity(0.85))
+                        .frame(width: 22, height: 22)
+                        .contentShape(Circle())
+                }
+                .menuStyle(.borderlessButton)
+                .frame(width: 22, height: 22)
+                .help("More Options")
 
-                    Slider(value: $player.volume, in: 0...1)
-                        .frame(width: 64)
-                        .accentColor(.accentColor)
+                if isVolumeExpanded {
+                    // MARK: - Apple Music Volume Capsule (Image 1)
+                    HStack(spacing: 8) {
+                        // Thick rounded volume slider bar
+                        GeometryReader { geo in
+                            let width = geo.size.width
+                            let vol = player.isMuted ? 0.0 : Double(player.volume)
+
+                            ZStack(alignment: .leading) {
+                                // Unfilled subtle grey track
+                                Capsule()
+                                    .fill(Color.primary.opacity(0.20))
+                                    .frame(height: 6)
+
+                                // Filled solid black/primary track
+                                Capsule()
+                                    .fill(Color.primary)
+                                    .frame(width: max(0, width * CGFloat(vol)), height: 6)
+                            }
+                            .frame(maxHeight: .infinity, alignment: .center)
+                            .contentShape(Rectangle())
+                            .gesture(
+                                DragGesture(minimumDistance: 0)
+                                    .onChanged { val in
+                                        isDraggingVolume = true
+                                        if player.isMuted { player.isMuted = false }
+                                        let newVol = Float(max(0.0, min(1.0, val.location.x / width)))
+                                        player.volume = newVol
+                                    }
+                                    .onEnded { _ in
+                                        isDraggingVolume = false
+                                    }
+                            )
+                        }
+                        .frame(width: 64, height: 16)
+
+                        // Speaker Icon Button
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                player.isMuted.toggle()
+                            }
+                        } label: {
+                            Image(systemName: volumeIcon)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.primary)
+                                .frame(width: 18, height: 18)
+                        }
+                        .buttonStyle(.plain)
+                        .help(player.isMuted ? "Unmute" : "Mute")
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(
+                        Capsule()
+                            .fill(Color.primary.opacity(0.08))
+                    )
+                    .overlay(
+                        Capsule()
+                            .stroke(Color.primary.opacity(0.06), lineWidth: 0.5)
+                    )
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                    .onHover { hovering in
+                        isHoveringVolume = hovering
+                    }
+                } else {
+                    // MARK: - Idle Icons: Lyrics, Queue & Speaker Icon (Image 2)
+                    HStack(spacing: 8) {
+                        // Lyrics button
+                        Button {
+                            showLyrics.toggle()
+                            onExpand?()
+                        } label: {
+                            Image(systemName: "quote.bubble")
+                                .font(.system(size: 12.5, weight: .medium))
+                                .foregroundColor(showLyrics ? .accentColor : .secondary)
+                                .frame(width: 20, height: 20)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Lyrics")
+
+                        // Up Next Queue button
+                        Button {
+                            showQueuePopover.toggle()
+                        } label: {
+                            Image(systemName: "list.bullet")
+                                .font(.system(size: 12.5, weight: .medium))
+                                .foregroundColor(showQueuePopover ? .accentColor : .secondary)
+                                .frame(width: 20, height: 20)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Up Next Queue")
+                        .popover(isPresented: $showQueuePopover, arrowEdge: .top) {
+                            QueuePopoverView(player: player)
+                        }
+
+                        // Speaker button (hovering expands the volume pill)
+                        Button {
+                            withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
+                                isVolumePinned.toggle()
+                            }
+                        } label: {
+                            Image(systemName: volumeIcon)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.primary)
+                                .frame(width: 22, height: 22)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Volume (Click to toggle slider, Hover to expand)")
+                        .onHover { hovering in
+                            withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
+                                isHoveringVolume = hovering
+                            }
+                        }
+                    }
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
                 }
             }
-            .frame(width: 135, alignment: .trailing)
+            .frame(width: isVolumeExpanded ? 140 : 120, alignment: .trailing)
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 16)
         .padding(.vertical, 4)
         .frame(maxWidth: 620)
         .frame(height: 48)
@@ -262,9 +364,9 @@ public struct NowPlayingBar: View {
                     .fill(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(0.24),
+                                Color.white.opacity(0.28),
                                 Color.white.opacity(0.08),
-                                Color.white.opacity(0.15)
+                                Color.white.opacity(0.16)
                             ],
                             startPoint: .top,
                             endPoint: .bottom
@@ -276,9 +378,9 @@ public struct NowPlayingBar: View {
                     .stroke(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(0.55),
+                                Color.white.opacity(0.60),
                                 Color.white.opacity(0.18),
-                                Color.white.opacity(0.35)
+                                Color.white.opacity(0.38)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -288,8 +390,14 @@ public struct NowPlayingBar: View {
             }
         )
         // Ambient glass elevation shadow
-        .shadow(color: Color.black.opacity(0.25), radius: 18, x: 0, y: 6)
-        .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 1.5)
+        .shadow(color: Color.black.opacity(0.20), radius: 18, x: 0, y: 6)
+        .shadow(color: Color.black.opacity(0.06), radius: 4, x: 0, y: 1.5)
+    }
+
+    private var scrubberProgress: Double {
+        let duration = max(1.0, player.duration)
+        let current = isDraggingScrubber ? scrubTime : player.currentTime
+        return min(1.0, max(0.0, current / duration))
     }
 
     private var volumeIcon: String {

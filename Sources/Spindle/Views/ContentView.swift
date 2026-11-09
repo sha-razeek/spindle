@@ -1,11 +1,13 @@
 import SwiftUI
 
 public enum NavigationItem: Hashable {
+    case search
+    case home
     case recentlyAdded
-    case songs
-    case albums
-    case coverStack
     case artists
+    case albums
+    case songs
+    case coverStack
 }
 
 public enum LibraryViewMode: String, CaseIterable, Identifiable {
@@ -32,11 +34,25 @@ public struct ContentView: View {
             // MARK: - Sidebar
             ScrollView {
                 VStack(alignment: .leading, spacing: 3) {
+                    sidebarItem(
+                        title: "Search",
+                        icon: "magnifyingglass",
+                        item: .search,
+                        count: nil
+                    )
+
+                    sidebarItem(
+                        title: "Home",
+                        icon: "house",
+                        item: .home,
+                        count: nil
+                    )
+
                     Text("Library")
                         .font(.system(size: 11.5, weight: .bold))
                         .foregroundColor(.secondary)
                         .padding(.horizontal, 14)
-                        .padding(.top, 12)
+                        .padding(.top, 14)
                         .padding(.bottom, 4)
 
                     sidebarItem(
@@ -75,7 +91,7 @@ public struct ContentView: View {
                     )
                 }
                 .padding(.horizontal, 8)
-                .padding(.top, 4)
+                .padding(.top, 46)
             }
             .navigationSplitViewColumnWidth(min: 200, ideal: 235, max: 300)
             .simultaneousGesture(
@@ -170,6 +186,14 @@ public struct ContentView: View {
                         // Content switcher
                         Group {
                             switch selectedItem {
+                            case .search:
+                                SearchView(library: library, player: player)
+                            case .home:
+                                RecentlyAddedView(
+                                    albums: library.recentlyAddedAlbums,
+                                    songs: library.recentlyAddedSongs,
+                                    player: player
+                                )
                             case .recentlyAdded:
                                 RecentlyAddedView(
                                     albums: library.recentlyAddedAlbums,
@@ -243,7 +267,8 @@ public struct ContentView: View {
                 }
             }
         }
-        .navigationTitle("Spindle")
+        .toolbar(removing: .sidebarToggle)
+        .navigationTitle("")
         .toolbarBackground(.ultraThinMaterial, for: .windowToolbar)
         .toolbarBackground(.visible, for: .windowToolbar)
         .background(WindowTranslucencyConfigurator())
@@ -320,6 +345,7 @@ struct WindowTranslucencyConfigurator: NSViewRepresentable {
         let view = NSView()
         DispatchQueue.main.async {
             guard let window = view.window else { return }
+            window.titleVisibility = .hidden
             window.titlebarAppearsTransparent = true
             window.toolbar?.showsBaselineSeparator = false
             window.styleMask.insert(.fullSizeContentView)
@@ -330,6 +356,7 @@ struct WindowTranslucencyConfigurator: NSViewRepresentable {
     func updateNSView(_ nsView: NSView, context: Context) {
         DispatchQueue.main.async {
             guard let window = nsView.window else { return }
+            window.titleVisibility = .hidden
             if !window.titlebarAppearsTransparent {
                 window.titlebarAppearsTransparent = true
             }
