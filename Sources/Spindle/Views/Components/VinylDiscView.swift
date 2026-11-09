@@ -7,7 +7,7 @@ public struct VinylDiscView: View {
     let size: CGFloat
     let isBlackVinyl: Bool
 
-    public init(artwork: NSImage?, isPlaying: Bool, size: CGFloat = 450, isBlackVinyl: Bool = true) {
+    public init(artwork: NSImage?, isPlaying: Bool, size: CGFloat = 450, isBlackVinyl: Bool = false) {
         self.artwork = artwork
         self.isPlaying = isPlaying
         self.size = size

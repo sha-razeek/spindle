@@ -31,10 +31,10 @@ public struct CrateLPSlabView: View, Equatable {
     }
 
     public var body: some View {
-        ZStack(alignment: .top) {
-            // MARK: - 3D Album LP Jacket & Spine Stack
+        ZStack(alignment: .topLeading) {
+            // MARK: - 3D Album LP Jacket & Spine Stack with Emerging White Vinyl Disc
             VStack(spacing: 0) {
-                // Top Spine Edge (Distinct, tactile physical LP spine)
+                // Top Spine Edge (Clean tactile physical LP spine)
                 HStack(spacing: 6) {
                     if isSelected && isPlaying {
                         Image(systemName: "speaker.wave.2.fill")
@@ -45,40 +45,40 @@ public struct CrateLPSlabView: View, Equatable {
 
                     // Album Title
                     Text(album.title)
-                        .font(.system(size: 12.5, weight: isSelected ? .bold : .semibold))
+                        .font(.system(size: 12, weight: isSelected ? .bold : .semibold))
                         .foregroundColor(spineTextColor)
                         .lineLimit(1)
 
                     // Artist Name
                     Text(album.artistName)
-                        .font(.system(size: 11, weight: .regular))
+                        .font(.system(size: 10.5, weight: .regular))
                         .foregroundColor(spineTextColor.opacity(0.85))
                         .lineLimit(1)
 
                     Spacer(minLength: 4)
 
-                    // Track count badge
+                    // Track count / status badge
                     if isSelected {
                         Text(isPlaying ? "PLAYING" : "ON DECK")
-                            .font(.system(size: 9, weight: .bold))
+                            .font(.system(size: 8.5, weight: .bold))
                             .tracking(0.6)
                             .foregroundColor(spineTextColor)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2.5)
+                            .padding(.horizontal, 5.5)
+                            .padding(.vertical, 2)
                             .background(spineTextColor.opacity(0.22))
                             .cornerRadius(3.5)
                     } else {
                         Text("\(album.trackCount) tracks")
-                            .font(.system(size: 9.5, weight: .medium))
+                            .font(.system(size: 9, weight: .medium))
                             .foregroundColor(spineTextColor.opacity(0.75))
-                            .padding(.horizontal, 5.5)
+                            .padding(.horizontal, 5)
                             .padding(.vertical, 2)
                             .background(spineTextColor.opacity(0.12))
                             .cornerRadius(3.5)
                     }
                 }
                 .padding(.horizontal, 10)
-                .frame(width: 310, height: 28)
+                .frame(width: 275, height: 28)
                 .background(spineBgColor)
                 .overlay(
                     // 3D tactile bevel edge lines
@@ -93,7 +93,7 @@ public struct CrateLPSlabView: View, Equatable {
                     }
                 )
                 .overlay(
-                    // Active selection ring
+                    // Active selection highlight outline
                     RoundedRectangle(cornerRadius: 1)
                         .stroke(isSelected ? Color.white.opacity(0.85) : Color.clear, lineWidth: 1.5)
                 )
@@ -105,10 +105,31 @@ public struct CrateLPSlabView: View, Equatable {
                 )
                 .zIndex(10)
 
-                // Front Album Artwork Jacket (Angled backwards in 3D perspective)
-                jacketView
+                // Front Album Artwork Jacket with White Vinyl popping out on the right
+                ZStack(alignment: .leading) {
+                    // MARK: - White LP Vinyl Disc (Pops out ~10% more when mouse is hovering)
+                    VinylDiscView(
+                        artwork: artworkImage,
+                        isPlaying: isPlaying,
+                        size: 190,
+                        isBlackVinyl: false // White vinyl disc as requested
+                    )
+                    // Normal rest: 74pt offset (peaks out through notch). Hover: 106pt offset (pops out 32pt / ~12% more!)
+                    .offset(
+                        x: isHovered ? 106 : 74,
+                        y: 5
+                    )
+                    .shadow(color: Color.black.opacity(isHovered ? 0.38 : 0.15), radius: isHovered ? 7 : 3, x: 4, y: 2)
+                    .animation(.spring(response: 0.32, dampingFraction: 0.72), value: isHovered)
+                    .zIndex(1)
+
+                    // Front Album Artwork Jacket with right thumb notch exposing the vinyl
+                    jacketView
+                        .zIndex(2)
+                }
+                .frame(width: 275, height: 180, alignment: .leading)
             }
-            .frame(width: 310)
+            .frame(width: 275)
             .rotation3DEffect(
                 .degrees(-26),
                 axis: (x: 1, y: 0, z: 0),
@@ -121,10 +142,12 @@ public struct CrateLPSlabView: View, Equatable {
                 x: 0,
                 y: isSelected ? 8 : (isHovered ? 5 : 2.5)
             )
+            .zIndex(2)
         }
-        // Overlapping row height: 76pt row height creates stacked physical LP appearance
-        .frame(width: 310, height: 76, alignment: .top)
-        .offset(y: (isHovered && !isSelected) ? -3 : 0)
+        // Overlapping row height: 76pt creates stacked physical LP crate look
+        .frame(width: 310, height: 76, alignment: .topLeading)
+        .offset(y: (isHovered && !isSelected) ? -5 : 0)
+        .zIndex(isHovered ? 100 : (isSelected ? 50 : 0))
         .animation(.spring(response: 0.35, dampingFraction: 0.80), value: isSelected)
         .animation(.easeInOut(duration: 0.15), value: isHovered)
         .contentShape(Rectangle())
@@ -139,7 +162,7 @@ public struct CrateLPSlabView: View, Equatable {
         }
     }
 
-    // MARK: - Angled Jacket View
+    // MARK: - Angled Jacket View with Thumb Notch
     @ViewBuilder
     private var jacketView: some View {
         ZStack(alignment: .center) {
@@ -154,7 +177,7 @@ public struct CrateLPSlabView: View, Equatable {
                     endPoint: .bottomTrailing
                 )
                 Image(systemName: "music.note")
-                    .font(.system(size: 36))
+                    .font(.system(size: 34))
                     .foregroundColor(.white.opacity(0.8))
             }
 
@@ -183,10 +206,10 @@ public struct CrateLPSlabView: View, Equatable {
                 .transition(.scale.combined(with: .opacity))
             }
         }
-        .frame(width: 310, height: 200)
-        .clipShape(RoundedRectangle(cornerRadius: 3.5, style: .continuous))
+        .frame(width: 275, height: 180)
+        .clipShape(SleeveWithNotchShape(hasNotch: true, cornerRadius: 3.5, notchDepth: 22, notchHeight: 46))
         .overlay(
-            RoundedRectangle(cornerRadius: 3.5, style: .continuous)
+            SleeveWithNotchShape(hasNotch: true, cornerRadius: 3.5, notchDepth: 22, notchHeight: 46)
                 .stroke(Color.white.opacity(0.18), lineWidth: 1.0)
         )
     }
@@ -211,9 +234,9 @@ public struct CrateLPSlabView: View, Equatable {
         if let loaded = await ArtworkLoader.shared.loadArtwork(for: targetSong) {
             guard !Task.isCancelled else { return }
             self.artworkImage = loaded
-            let colors = ArtworkLoader.shared.spineColors(for: targetSong, fallbackID: album.id)
-            self.spineBgColor = colors.bg
-            self.spineTextColor = colors.text
+            let updatedColors = ArtworkLoader.shared.spineColors(for: targetSong, fallbackID: album.id)
+            self.spineBgColor = updatedColors.bg
+            self.spineTextColor = updatedColors.text
         }
     }
 }

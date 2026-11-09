@@ -90,7 +90,7 @@ public struct CoverStackView: View {
     }
 
     private var activeDeckAlbum: Album? {
-        deckAlbum ?? currentlyPlayingAlbum ?? albums.first
+        deckAlbum ?? currentlyPlayingAlbum
     }
 
     private var currentBackdrop: BackdropPalette {
@@ -150,6 +150,14 @@ public struct CoverStackView: View {
                                     if let album = activeDeckAlbum {
                                         selectedAlbumForDetail = album
                                     }
+                                },
+                                onEject: {
+                                    withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) {
+                                        if player.isPlaying {
+                                            player.togglePlayPause()
+                                        }
+                                        deckAlbum = nil
+                                    }
                                 }
                             )
 
@@ -181,13 +189,13 @@ public struct CoverStackView: View {
             .onAppear {
                 buildLetterMap()
                 if deckAlbum == nil {
-                    deckAlbum = currentlyPlayingAlbum ?? albums.first
+                    deckAlbum = currentlyPlayingAlbum
                 }
             }
             .onChange(of: albums.count) { _, _ in
                 buildLetterMap()
                 if deckAlbum == nil {
-                    deckAlbum = currentlyPlayingAlbum ?? albums.first
+                    deckAlbum = currentlyPlayingAlbum
                 }
             }
             .onChange(of: player.currentSong?.id) { _, newSongID in
