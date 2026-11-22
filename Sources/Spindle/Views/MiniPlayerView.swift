@@ -166,14 +166,19 @@ public struct MiniPlayerView: View {
 
                 Spacer()
 
-                // Transparent expand button (no keyboard focus ring or blue border)
+                // Expand button: black icon on crisp white circular background
                 Button {
                     onExpand()
                 } label: {
                     Image(systemName: "arrow.up.left.and.arrow.down.right")
-                        .font(.system(size: 11.5, weight: .semibold))
-                        .foregroundColor(.white.opacity(0.85))
-                        .frame(width: 26, height: 26)
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(Color.black.opacity(0.85))
+                        .frame(width: 25, height: 25)
+                        .background(
+                            Circle()
+                                .fill(Color.white.opacity(0.95))
+                                .shadow(color: Color.black.opacity(0.18), radius: 2, x: 0, y: 1)
+                        )
                         .contentShape(Circle())
                 }
                 .buttonStyle(.plain)

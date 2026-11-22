@@ -227,6 +227,7 @@ public struct CoverStackView: View {
             }
             .onDisappear {
                 player.onEndOfQueue = nil
+                player.onNextAlbum = nil
             }
             .onChange(of: albums.count) { _, _ in
                 buildLetterMap()
@@ -248,10 +249,12 @@ public struct CoverStackView: View {
 
     // MARK: - Vinyl Drawer Continuous Album Playback
     private func setupEndOfQueueHandler() {
-        player.onEndOfQueue = { [weak player] in
+        let handler: () -> Bool = { [weak player] in
             guard player != nil else { return false }
             return playNextAlbumInDrawer()
         }
+        player.onEndOfQueue = handler
+        player.onNextAlbum = handler
     }
 
     @discardableResult

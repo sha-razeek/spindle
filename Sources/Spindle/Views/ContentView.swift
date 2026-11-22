@@ -187,22 +187,27 @@ public struct ContentView: View {
             .toolbar {
                 ToolbarItemGroup(placement: .automatic) {
                     if selectedItem == .songs || selectedItem == .albums || selectedItem == .coverStack {
-                        ToolbarViewModeSwitcher(selectedItem: $selectedItem)
+                        ToolbarViewModeSwitcher(selectedItem: $selectedItem, isDarkBackground: is3DViewActive)
                     } else if selectedItem == .recentlyAdded || selectedItem == nil {
-                        ToolbarRecentlyAddedSwitcher(displayMode: $recentlyAddedDisplayMode)
+                        ToolbarRecentlyAddedSwitcher(displayMode: $recentlyAddedDisplayMode, isDarkBackground: is3DViewActive)
                     }
 
                     ToolbarSearchField(
                         query: $library.searchQuery,
-                        prompt: (selectedItem == .recentlyAdded || selectedItem == nil) ? "Find in Recently Added" : "Find in Library"
+                        prompt: (selectedItem == .recentlyAdded || selectedItem == nil) ? "Find in Recently Added" : "Find in Library",
+                        isDarkBackground: is3DViewActive
                     )
                 }
             }
+        }
+        .onAppear {
+            setupGlobalAlbumHandlers()
         }
         .onChange(of: library.searchQuery) { _, _ in
             library.rebuildCollections()
         }
         .onChange(of: selectedItem) { _, _ in
+            setupGlobalAlbumHandlers()
             if showExpandedNowPlaying {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                     showExpandedNowPlaying = false
@@ -213,6 +218,68 @@ public struct ContentView: View {
         .toolbarBackground(.hidden, for: .windowToolbar)
         .background(WindowTranslucencyConfigurator())
         .frame(minWidth: 900, minHeight: 600)
+    }
+
+    private var is3DViewActive: Bool {
+        if selectedItem == .coverStack {
+            return true
+        }
+        if (selectedItem == .recentlyAdded || selectedItem == nil) && recentlyAddedDisplayMode == .stack {
+            return true
+        }
+        return false
+    }
+
+    private func setupGlobalAlbumHandlers() {
+        if player.onNextAlbum == nil {
+            player.onNextAlbum = { [weak player] in
+                guard let player = player else { return false }
+                return advanceToNextAlbumGlobally(player: player)
+            }
+        }
+        if player.onEndOfQueue == nil {
+            player.onEndOfQueue = { [weak player] in
+                guard let player = player else { return false }
+                return advanceToNextAlbumGlobally(player: player)
+            }
+        }
+    }
+
+    private func advanceToNextAlbumGlobally(player: AudioPlayer) -> Bool {
+        let albumList: [Album]
+        if selectedItem == .recentlyAdded || selectedItem == nil {
+            albumList = library.recentlyAddedAlbums
+        } else {
+            albumList = library.albums
+        }
+        guard !albumList.isEmpty else { return false }
+
+        let currentSong = player.currentSong
+        let currentIndex = albumList.firstIndex(where: { album in
+            if let song = currentSong, album.songs.contains(where: { $0.id == song.id }) {
+                return true
+            }
+            return false
+        })
+
+        var nextAlbum: Album? = nil
+        if let idx = currentIndex {
+            let nextIdx = idx + 1
+            if nextIdx < albumList.count {
+                nextAlbum = albumList[nextIdx]
+            } else if player.repeatMode == .all {
+                nextAlbum = albumList[0]
+            }
+        } else {
+            nextAlbum = albumList.first
+        }
+
+        guard let target = nextAlbum, let firstSong = target.songs.first else {
+            return false
+        }
+
+        player.play(song: firstSong, inContext: target.songs)
+        return true
     }
 
     @ViewBuilder
@@ -273,6 +340,7 @@ struct WindowTranslucencyConfigurator: NSViewRepresentable {
 // MARK: - Apple Music Styled View Mode Switcher (Capsule buttons with very rounded corners)
 struct ToolbarViewModeSwitcher: View {
     @Binding var selectedItem: NavigationItem?
+    var isDarkBackground: Bool = false
 
     var currentMode: LibraryViewMode {
         switch selectedItem {
@@ -306,13 +374,14 @@ struct ToolbarViewModeSwitcher: View {
         .padding(2.5)
         .background(
             Capsule()
-                .fill(Color.white.opacity(0.18))
+                .fill(isDarkBackground ? Color.white.opacity(0.18) : Color.primary.opacity(0.06))
         )
         .overlay(
             Capsule()
-                .stroke(Color.white.opacity(0.30), lineWidth: 0.8)
+                .stroke(isDarkBackground ? Color.white.opacity(0.30) : Color.primary.opacity(0.10), lineWidth: 0.8)
         )
         .frame(height: 28)
+        .animation(.easeInOut(duration: 0.22), value: isDarkBackground)
     }
 
     @ViewBuilder
@@ -321,14 +390,23 @@ struct ToolbarViewModeSwitcher: View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 12, weight: isSelected ? .bold : .medium))
-                .foregroundColor(isSelected ? Color.black.opacity(0.88) : Color.white.opacity(0.92))
+                .foregroundColor(
+                    isSelected
+                        ? (isDarkBackground ? Color.black.opacity(0.88) : .primary)
+                        : (isDarkBackground ? Color.white.opacity(0.92) : .secondary)
+                )
                 .frame(width: 28, height: 23)
                 .background(
                     Group {
                         if isSelected {
                             Capsule()
-                                .fill(Color.white)
-                                .shadow(color: Color.black.opacity(0.25), radius: 2.5, x: 0, y: 1)
+                                .fill(isDarkBackground ? Color.white : Color(NSColor.controlBackgroundColor))
+                                .shadow(
+                                    color: Color.black.opacity(isDarkBackground ? 0.25 : 0.12),
+                                    radius: isDarkBackground ? 2.5 : 2,
+                                    x: 0,
+                                    y: 1
+                                )
                         } else {
                             Color.clear
                         }
@@ -346,6 +424,7 @@ struct ToolbarViewModeSwitcher: View {
 // MARK: - Apple Music Styled Recently Added View Mode Switcher
 struct ToolbarRecentlyAddedSwitcher: View {
     @Binding var displayMode: RecentlyAddedDisplayMode
+    var isDarkBackground: Bool = false
 
     var body: some View {
         HStack(spacing: 2) {
@@ -370,13 +449,14 @@ struct ToolbarRecentlyAddedSwitcher: View {
         .padding(2.5)
         .background(
             Capsule()
-                .fill(Color.white.opacity(0.18))
+                .fill(isDarkBackground ? Color.white.opacity(0.18) : Color.primary.opacity(0.06))
         )
         .overlay(
             Capsule()
-                .stroke(Color.white.opacity(0.30), lineWidth: 0.8)
+                .stroke(isDarkBackground ? Color.white.opacity(0.30) : Color.primary.opacity(0.10), lineWidth: 0.8)
         )
         .frame(height: 28)
+        .animation(.easeInOut(duration: 0.22), value: isDarkBackground)
     }
 
     @ViewBuilder
@@ -385,14 +465,23 @@ struct ToolbarRecentlyAddedSwitcher: View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 12, weight: isSelected ? .bold : .medium))
-                .foregroundColor(isSelected ? Color.black.opacity(0.88) : Color.white.opacity(0.92))
+                .foregroundColor(
+                    isSelected
+                        ? (isDarkBackground ? Color.black.opacity(0.88) : .primary)
+                        : (isDarkBackground ? Color.white.opacity(0.92) : .secondary)
+                )
                 .frame(width: 28, height: 23)
                 .background(
                     Group {
                         if isSelected {
                             Capsule()
-                                .fill(Color.white)
-                                .shadow(color: Color.black.opacity(0.25), radius: 2.5, x: 0, y: 1)
+                                .fill(isDarkBackground ? Color.white : Color(NSColor.controlBackgroundColor))
+                                .shadow(
+                                    color: Color.black.opacity(isDarkBackground ? 0.25 : 0.12),
+                                    radius: isDarkBackground ? 2.5 : 2,
+                                    x: 0,
+                                    y: 1
+                                )
                         } else {
                             Color.clear
                         }
@@ -411,25 +500,26 @@ struct ToolbarRecentlyAddedSwitcher: View {
 struct ToolbarSearchField: View {
     @Binding var query: String
     var prompt: String = "Find in Library"
+    var isDarkBackground: Bool = false
     @FocusState private var isFocused: Bool
 
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(.white.opacity(0.90))
+                .font(.system(size: 12, weight: isDarkBackground ? .semibold : .medium))
+                .foregroundColor(isDarkBackground ? Color.white.opacity(0.90) : .secondary)
 
             ZStack(alignment: .leading) {
                 if query.isEmpty {
                     Text(prompt)
                         .font(.system(size: 12.5))
-                        .foregroundColor(.white.opacity(0.65))
+                        .foregroundColor(isDarkBackground ? Color.white.opacity(0.65) : .secondary)
                         .allowsHitTesting(false)
                 }
                 TextField("", text: $query)
                     .textFieldStyle(.plain)
                     .font(.system(size: 12.5))
-                    .foregroundColor(.white)
+                    .foregroundColor(isDarkBackground ? .white : .primary)
                     .focused($isFocused)
             }
 
@@ -439,7 +529,7 @@ struct ToolbarSearchField: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 11.5))
-                        .foregroundColor(.white.opacity(0.85))
+                        .foregroundColor(isDarkBackground ? Color.white.opacity(0.85) : .secondary)
                 }
                 .buttonStyle(.plain)
                 .focusable(false)
@@ -451,15 +541,18 @@ struct ToolbarSearchField: View {
         .frame(width: 200, height: 28)
         .background(
             Capsule()
-                .fill(Color.white.opacity(0.18))
+                .fill(isDarkBackground ? Color.white.opacity(0.18) : Color.primary.opacity(0.06))
         )
         .overlay(
             Capsule()
                 .stroke(
-                    isFocused ? Color.white : Color.white.opacity(0.30),
+                    isFocused
+                        ? (isDarkBackground ? Color.white : Color(red: 0.004, green: 0.471, blue: 0.941).opacity(0.85))
+                        : (isDarkBackground ? Color.white.opacity(0.30) : Color.primary.opacity(0.10)),
                     lineWidth: isFocused ? 1.5 : 0.8
                 )
         )
+        .animation(.easeInOut(duration: 0.22), value: isDarkBackground)
         .animation(.easeInOut(duration: 0.15), value: isFocused)
     }
 }

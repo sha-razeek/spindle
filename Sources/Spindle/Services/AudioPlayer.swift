@@ -58,6 +58,9 @@ public final class AudioPlayer: ObservableObject {
     /// If it returns true, the caller has queued and started the next item/album.
     public var onEndOfQueue: (() -> Bool)?
 
+    /// Callback invoked to advance directly to the next album on the active list.
+    public var onNextAlbum: (() -> Bool)?
+
     @Published public var volume: Float = 1.0 {
         didSet {
             player?.volume = isMuted ? 0 : volume
@@ -87,7 +90,10 @@ public final class AudioPlayer: ObservableObject {
 
     public var hasNext: Bool {
         if repeatMode == .all || repeatMode == .one { return !queue.isEmpty }
-        return queueIndex + 1 < queue.count
+        if queueIndex + 1 < queue.count { return true }
+        // When playing an album, if an end-of-queue or next-album provider exists, the next button is enabled to advance to the next album
+        if onNextAlbum != nil || onEndOfQueue != nil { return true }
+        return false
     }
 
     public var hasPrevious: Bool {
@@ -209,7 +215,10 @@ public final class AudioPlayer: ObservableObject {
             return
         }
 
-        guard !queue.isEmpty else { return }
+        guard !queue.isEmpty else {
+            _ = onNextAlbum?() ?? onEndOfQueue?()
+            return
+        }
 
         if queueIndex + 1 < queue.count {
             queueIndex += 1
@@ -217,16 +226,27 @@ public final class AudioPlayer: ObservableObject {
             if let loc = nextSong.location {
                 startPlayback(song: nextSong, url: loc)
             }
-        } else if repeatMode == .all {
+        } else if repeatMode == .all && onNextAlbum == nil && onEndOfQueue == nil {
             queueIndex = 0
             let nextSong = queue[0]
             if let loc = nextSong.location {
                 startPlayback(song: nextSong, url: loc)
             }
         } else {
-            // End of queue reached: notify handler (e.g. advance to next album in Vinyl Drawer)
+            // End of current album/queue reached: advance to next album on the active list
+            if let onNextAlbum = onNextAlbum, onNextAlbum() {
+                return
+            }
             if let onEndOfQueue = onEndOfQueue, onEndOfQueue() {
                 return
+            }
+            if repeatMode == .all {
+                queueIndex = 0
+                let nextSong = queue[0]
+                if let loc = nextSong.location {
+                    startPlayback(song: nextSong, url: loc)
+                    return
+                }
             }
             player?.pause()
             isPlaying = false
