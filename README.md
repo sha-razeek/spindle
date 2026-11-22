@@ -72,6 +72,26 @@ Spindle connects directly to your existing Apple Music library using macOS's nat
 
 ---
 
+## Download & Installation
+
+1. Download **`Spindle.dmg`** from [GitHub Releases](https://github.com/sha-razeek/spindle/releases/latest).
+2. Open the downloaded `Spindle.dmg` disk image.
+3. Drag **Spindle** into your **Applications** folder.
+
+### macOS Gatekeeper Notice (Unnotarized / Open-Source Apps)
+
+Because Spindle is an open-source project and is not signed with a paid Apple Developer ID certificate, macOS Gatekeeper will show a notice on first launch:
+> *"Spindle can’t be opened because Apple cannot check it for malicious software"* or *"cannot be opened because it is from an unidentified developer"*.
+
+To launch Spindle for the first time:
+- **Right-click (or Control-click)** `Spindle` in `/Applications` $\rightarrow$ click **Open** $\rightarrow$ click **Open** on the confirmation prompt. macOS will remember this approval permanently.
+- Alternatively, via **Terminal**:
+  ```bash
+  xattr -cr /Applications/Spindle.app
+  ```
+
+---
+
 ## Building from Source
 
 ### Prerequisites
