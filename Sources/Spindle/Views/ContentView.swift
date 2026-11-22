@@ -159,7 +159,12 @@ public struct ContentView: View {
                                     albums: library.recentlyAddedAlbums,
                                     songs: library.recentlyAddedSongs,
                                     player: player,
-                                    displayMode: $recentlyAddedDisplayMode
+                                    displayMode: $recentlyAddedDisplayMode,
+                                    onOpenNowPlaying: {
+                                        withAnimation(.spring(response: 0.38, dampingFraction: 0.78)) {
+                                            showExpandedNowPlaying = true
+                                        }
+                                    }
                                 )
                             case .artists:
                                 ArtistsView(artists: library.artists, player: player)
@@ -168,7 +173,15 @@ public struct ContentView: View {
                             case .songs:
                                 SongsListView(songs: library.songs, player: player)
                             case .coverStack:
-                                CoverStackView(albums: library.albums, player: player)
+                                CoverStackView(
+                                    albums: library.albums,
+                                    player: player,
+                                    onOpenNowPlaying: {
+                                        withAnimation(.spring(response: 0.38, dampingFraction: 0.78)) {
+                                            showExpandedNowPlaying = true
+                                        }
+                                    }
+                                )
                             }
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -216,7 +229,7 @@ public struct ContentView: View {
         }
         .navigationTitle("Spindle")
         .toolbarBackground(.hidden, for: .windowToolbar)
-        .background(WindowTranslucencyConfigurator())
+        .background(WindowTranslucencyConfigurator(isDark: is3DViewActive))
         .frame(minWidth: 900, minHeight: 600)
     }
 
@@ -308,16 +321,16 @@ public struct ContentView: View {
 }
 
 // MARK: - Window Translucency Configurator
-// Ensures the macOS top title bar and toolbar are completely transparent like Apple Music
+// Ensures the macOS top title bar and toolbar are completely transparent like Apple Music,
+// and dynamically tints the Spindle title and sidebar open/close toggle button white when 3D view is active.
 struct WindowTranslucencyConfigurator: NSViewRepresentable {
+    var isDark: Bool = false
+
     func makeNSView(context: Context) -> NSView {
         let view = NSView()
         DispatchQueue.main.async {
             guard let window = view.window else { return }
-            window.titlebarAppearsTransparent = true
-            window.titlebarSeparatorStyle = .none
-            window.toolbar?.showsBaselineSeparator = false
-            window.styleMask.insert(.fullSizeContentView)
+            configureWindow(window, isDark: isDark)
         }
         return view
     }
@@ -325,14 +338,77 @@ struct WindowTranslucencyConfigurator: NSViewRepresentable {
     func updateNSView(_ nsView: NSView, context: Context) {
         DispatchQueue.main.async {
             guard let window = nsView.window else { return }
-            if !window.titlebarAppearsTransparent {
-                window.titlebarAppearsTransparent = true
+            configureWindow(window, isDark: isDark)
+        }
+    }
+
+    private func configureWindow(_ window: NSWindow, isDark: Bool) {
+        if !window.titlebarAppearsTransparent {
+            window.titlebarAppearsTransparent = true
+        }
+        window.titlebarSeparatorStyle = .none
+        if !window.styleMask.contains(.fullSizeContentView) {
+            window.styleMask.insert(.fullSizeContentView)
+        }
+        window.toolbar?.showsBaselineSeparator = false
+
+        // Update window and titlebar appearance
+        let targetAppearance: NSAppearance? = isDark ? NSAppearance(named: .darkAqua) : nil
+        if window.appearance != targetAppearance {
+            window.appearance = targetAppearance
+        }
+
+        // Apply appearance and tint to titlebar view hierarchy
+        if let titlebarView = window.standardWindowButton(.closeButton)?.superview {
+            if titlebarView.appearance != targetAppearance {
+                titlebarView.appearance = targetAppearance
             }
-            window.titlebarSeparatorStyle = .none
-            if !window.styleMask.contains(.fullSizeContentView) {
-                window.styleMask.insert(.fullSizeContentView)
+            updateTitleAndSidebarViews(in: titlebarView, isDark: isDark)
+        }
+
+        // Also update toolbar items directly (e.g. sidebar open/close toggle button)
+        if let toolbar = window.toolbar {
+            for item in toolbar.items {
+                applyAppearance(to: item, isDark: isDark)
             }
-            window.toolbar?.showsBaselineSeparator = false
+        }
+    }
+
+    private func applyAppearance(to item: NSToolbarItem, isDark: Bool) {
+        let isSidebarItem = item.itemIdentifier.rawValue.localizedCaseInsensitiveContains("sidebar")
+        if let btn = item.view as? NSButton {
+            if isSidebarItem {
+                btn.contentTintColor = isDark ? .white : nil
+            }
+            btn.appearance = isDark ? NSAppearance(named: .darkAqua) : nil
+        } else if let customView = item.view {
+            if customView.appearance != (isDark ? NSAppearance(named: .darkAqua) : nil) {
+                customView.appearance = isDark ? NSAppearance(named: .darkAqua) : nil
+            }
+            updateTitleAndSidebarViews(in: customView, isDark: isDark)
+        }
+    }
+
+    private func updateTitleAndSidebarViews(in view: NSView, isDark: Bool) {
+        if let tf = view as? NSTextField {
+            if tf.stringValue == "Spindle" || tf.stringValue == view.window?.title {
+                tf.textColor = isDark ? .white : .labelColor
+            }
+        }
+        if let btn = view as? NSButton {
+            let desc = String(describing: type(of: btn)) + " " + btn.description
+            if desc.localizedCaseInsensitiveContains("sidebar") || btn.action?.description.contains("toggleSidebar") == true {
+                btn.contentTintColor = isDark ? .white : nil
+            }
+        }
+        if let iv = view as? NSImageView {
+            let desc = String(describing: type(of: iv)) + " " + iv.description
+            if desc.localizedCaseInsensitiveContains("sidebar") {
+                iv.contentTintColor = isDark ? .white : nil
+            }
+        }
+        for sub in view.subviews {
+            updateTitleAndSidebarViews(in: sub, isDark: isDark)
         }
     }
 }

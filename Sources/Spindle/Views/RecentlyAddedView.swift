@@ -25,16 +25,20 @@ public struct RecentlyAddedView: View {
         GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 20)
     ]
 
+    public let onOpenNowPlaying: (() -> Void)?
+
     public init(
         albums: [Album],
         songs: [Song],
         player: AudioPlayer,
-        displayMode: Binding<RecentlyAddedDisplayMode> = .constant(.grid)
+        displayMode: Binding<RecentlyAddedDisplayMode> = .constant(.grid),
+        onOpenNowPlaying: (() -> Void)? = nil
     ) {
         self.albums = albums
         self.songs = songs
         self.player = player
         self._displayMode = displayMode
+        self.onOpenNowPlaying = onOpenNowPlaying
     }
 
     public var body: some View {
@@ -50,7 +54,12 @@ public struct RecentlyAddedView: View {
                 case .grid:
                     albumsGridView
                 case .stack:
-                    CoverStackView(albums: albums, player: player, showsAlphabetIndex: false)
+                    CoverStackView(
+                        albums: albums,
+                        player: player,
+                        showsAlphabetIndex: false,
+                        onOpenNowPlaying: onOpenNowPlaying
+                    )
                 }
             }
         }

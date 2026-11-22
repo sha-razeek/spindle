@@ -116,11 +116,18 @@ public struct CoverStackView: View {
     }
 
     public let showsAlphabetIndex: Bool
+    public var onOpenNowPlaying: (() -> Void)? = nil
 
-    public init(albums: [Album], player: AudioPlayer, showsAlphabetIndex: Bool = true) {
+    public init(
+        albums: [Album],
+        player: AudioPlayer,
+        showsAlphabetIndex: Bool = true,
+        onOpenNowPlaying: (() -> Void)? = nil
+    ) {
         self.albums = albums
         self.player = player
         self.showsAlphabetIndex = showsAlphabetIndex
+        self.onOpenNowPlaying = onOpenNowPlaying
     }
 
     private var isAlphabetical: Bool {
@@ -180,6 +187,17 @@ public struct CoverStackView: View {
                                 },
                                 onSelectDetail: {
                                     if let album = activeDeckAlbum {
+                                        selectedAlbumForDetail = album
+                                    }
+                                },
+                                onOpenNowPlaying: {
+                                    // Start playing if not already playing
+                                    if !isCurrentlyPlayingActiveDeckAlbum, let album = activeDeckAlbum, let first = album.songs.first {
+                                        player.play(song: first, inContext: album.songs)
+                                    }
+                                    if let openNowPlaying = onOpenNowPlaying {
+                                        openNowPlaying()
+                                    } else if let album = activeDeckAlbum {
                                         selectedAlbumForDetail = album
                                     }
                                 },

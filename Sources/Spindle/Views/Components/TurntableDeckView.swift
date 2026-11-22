@@ -7,10 +7,10 @@ public struct TurntableDeckView: View {
     @ObservedObject var player: AudioPlayer
     var onTogglePlay: () -> Void
     var onSelectDetail: () -> Void
+    var onOpenNowPlaying: (() -> Void)? = nil
     var onEject: (() -> Void)? = nil
 
     @State private var artworkImage: NSImage?
-    @State private var isHoveringJacket: Bool = false
     @State private var isHoveringVinyl: Bool = false
 
     public init(
@@ -19,6 +19,7 @@ public struct TurntableDeckView: View {
         player: AudioPlayer,
         onTogglePlay: @escaping () -> Void,
         onSelectDetail: @escaping () -> Void,
+        onOpenNowPlaying: (() -> Void)? = nil,
         onEject: (() -> Void)? = nil
     ) {
         self.album = album
@@ -26,6 +27,7 @@ public struct TurntableDeckView: View {
         self.player = player
         self.onTogglePlay = onTogglePlay
         self.onSelectDetail = onSelectDetail
+        self.onOpenNowPlaying = onOpenNowPlaying
         self.onEject = onEject
     }
 
@@ -94,11 +96,16 @@ public struct TurntableDeckView: View {
                         .onHover { h in isHoveringVinyl = h }
                         .onTapGesture { onTogglePlay() }
 
-                        // 2. Large Front Album Sleeve / Jacket
+                        // 2. Large Front Album Sleeve / Jacket (Clicking opens Now Playing view)
                         albumJacketView(size: sleeveSize)
                             .contentShape(Rectangle())
-                            .onHover { h in isHoveringJacket = h }
-                            .onTapGesture { onTogglePlay() }
+                            .onTapGesture {
+                                if let openNowPlaying = onOpenNowPlaying {
+                                    openNowPlaying()
+                                } else {
+                                    onSelectDetail()
+                                }
+                            }
 
                         // 3. Precision Audiophile Tonearm (Unified placement)
                         TonearmView(
@@ -373,8 +380,6 @@ public struct TurntableDeckView: View {
     // MARK: - Album Jacket Sleeve
     @ViewBuilder
     private func albumJacketView(size: CGFloat) -> some View {
-        let playPillSize = max(56.0, min(84.0, size * 0.10))
-        let playIconSize = max(22.0, min(34.0, size * 0.040))
         let notchCornerRadius = max(8.0, min(16.0, size * 0.018))
 
         ZStack(alignment: .center) {
@@ -408,20 +413,6 @@ public struct TurntableDeckView: View {
                     .fill(Color.white.opacity(0.25))
                     .frame(width: 2)
                 Spacer()
-            }
-
-            // Hover play pill
-            if isHoveringJacket {
-                ZStack {
-                    Circle()
-                        .fill(Color.black.opacity(0.65))
-                        .frame(width: playPillSize, height: playPillSize)
-                    Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: playIconSize, weight: .bold))
-                        .foregroundColor(.white)
-                        .offset(x: isPlaying ? 0 : 2)
-                }
-                .transition(.scale.combined(with: .opacity))
             }
         }
         .frame(width: size, height: size)
