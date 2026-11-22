@@ -20,7 +20,7 @@ public final class MiniPlayerController: NSObject, NSWindowDelegate {
 
         if panel == nil {
             let p = NSPanel(
-                contentRect: NSRect(x: 0, y: 0, width: 480, height: 160),
+                contentRect: NSRect(x: 0, y: 0, width: 540, height: 185),
                 styleMask: [
                     .titled,
                     .closable,
@@ -47,6 +47,7 @@ public final class MiniPlayerController: NSObject, NSWindowDelegate {
                 }
             )
             p.contentView = hostingView
+            p.setContentSize(NSSize(width: 540, height: 185))
             p.center()
             self.panel = p
         }
