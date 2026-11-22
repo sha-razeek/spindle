@@ -34,7 +34,7 @@ public struct MiniPlayerView: View {
             WindowDragArea()
 
             // MARK: - 1. Liquid Glass Translucent Window Background
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(.ultraThinMaterial)
                 .allowsHitTesting(false)
 
@@ -47,13 +47,13 @@ public struct MiniPlayerView: View {
                 ],
                 center: .init(x: 0.22, y: 0.50),
                 startRadius: 20,
-                endRadius: 340
+                endRadius: 380
             )
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             .allowsHitTesting(false)
 
             // Specular border highlight
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .stroke(
                     LinearGradient(
                         colors: [
@@ -69,18 +69,18 @@ public struct MiniPlayerView: View {
                 .allowsHitTesting(false)
 
             // MARK: - 2. Content: Left Album + Spinning Disc, Right Title & Controls
-            HStack(spacing: 18) {
-                // LEFT: Smaller Album Sleeve + Sliding Vinyl Disc (Slightly larger, prominent turntable)
+            HStack(spacing: 20) {
+                // LEFT: Album Sleeve + Sliding Vinyl Disc (Enlarged prominent turntable deck)
                 miniTurntableDeckView
-                    .frame(width: 176, height: 126)
+                    .frame(width: 208, height: 150)
 
                 // RIGHT: Song Title, Details, Scrubber, Transport & Expand Button
                 detailsSection
             }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 16)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 18)
         }
-        .frame(width: 540, height: 185)
+        .frame(width: 620, height: 215)
         .task(id: player.currentSong?.id) {
             await loadArtwork()
         }
@@ -88,9 +88,9 @@ public struct MiniPlayerView: View {
 
     // MARK: - Left Deck (Album Sleeve + Sliding Vinyl Disc)
     private var miniTurntableDeckView: some View {
-        let sleeveSize: CGFloat = 122
-        let discSize: CGFloat = 116
-        let discOffset: CGFloat = 50
+        let sleeveSize: CGFloat = 146
+        let discSize: CGFloat = 140
+        let discOffset: CGFloat = 58
 
         return ZStack(alignment: .leading) {
             // White Vinyl Disc sliding out from the sleeve and rotating during playback
@@ -119,7 +119,7 @@ public struct MiniPlayerView: View {
                         endPoint: .bottomTrailing
                     )
                     Image(systemName: "music.note")
-                        .font(.system(size: 32))
+                        .font(.system(size: 38))
                         .foregroundColor(.white.opacity(0.85))
                 }
 
@@ -127,20 +127,20 @@ public struct MiniPlayerView: View {
                 if isHoveringJacket {
                     Circle()
                         .fill(Color.black.opacity(0.55))
-                        .frame(width: 38, height: 38)
+                        .frame(width: 44, height: 44)
                     Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.system(size: 18, weight: .bold))
                         .foregroundColor(.white)
                         .offset(x: player.isPlaying ? 0 : 1.5)
                 }
             }
             .frame(width: sleeveSize, height: sleeveSize)
-            .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .stroke(Color.white.opacity(0.22), lineWidth: 1)
             )
-            .shadow(color: Color.black.opacity(0.42), radius: 10, x: 2, y: 5)
+            .shadow(color: Color.black.opacity(0.42), radius: 12, x: 2, y: 6)
             .contentShape(Rectangle())
             .onHover { isHoveringJacket = $0 }
             .onTapGesture {
@@ -151,19 +151,19 @@ public struct MiniPlayerView: View {
 
     // MARK: - Right Details Section
     private var detailsSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             // Top Bar: Badge + Expand Button
             HStack {
-                HStack(spacing: 4.5) {
+                HStack(spacing: 5) {
                     Image(systemName: "record.circle")
-                        .font(.system(size: 9.5, weight: .bold))
+                        .font(.system(size: 10, weight: .bold))
                     Text("SPINDLE MINI")
-                        .font(.system(size: 9, weight: .bold))
+                        .font(.system(size: 9.5, weight: .bold))
                         .tracking(0.9)
                 }
                 .foregroundColor(.white.opacity(0.78))
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3.5)
                 .background(
                     Capsule()
                         .fill(Color.white.opacity(0.10))
@@ -178,10 +178,10 @@ public struct MiniPlayerView: View {
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "arrow.up.left.and.arrow.down.right")
-                            .font(.system(size: 10.5, weight: .bold))
+                            .font(.system(size: 11.5, weight: .bold))
                     }
                     .foregroundColor(.white.opacity(0.90))
-                    .frame(width: 25, height: 25)
+                    .frame(width: 28, height: 28)
                     .background(
                         Circle()
                             .fill(Color.white.opacity(0.12))
@@ -196,12 +196,12 @@ public struct MiniPlayerView: View {
             // Title & Artist (allowsHitTesting false so clicking text also drags window)
             VStack(alignment: .leading, spacing: 2) {
                 Text(currentSong?.title ?? "Not Playing")
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: 16, weight: .bold))
                     .foregroundColor(.primary)
                     .lineLimit(1)
 
                 Text(currentSong?.artistName ?? "Select a track to start listening")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
@@ -213,13 +213,13 @@ public struct MiniPlayerView: View {
             scrubberView
 
             // Bottom Transport Controls Row
-            HStack(spacing: 14) {
+            HStack(spacing: 16) {
                 // Shuffle
                 Button {
                     player.isShuffleEnabled.toggle()
                 } label: {
                     Image(systemName: "shuffle")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: 12, weight: .semibold))
                         .foregroundColor(player.isShuffleEnabled ? Color.accentColor : .secondary)
                 }
                 .buttonStyle(.plain)
@@ -230,7 +230,7 @@ public struct MiniPlayerView: View {
                     player.previousTrack()
                 } label: {
                     Image(systemName: "backward.fill")
-                        .font(.system(size: 13))
+                        .font(.system(size: 14.5))
                         .foregroundColor(.primary)
                 }
                 .buttonStyle(.plain)
@@ -243,9 +243,9 @@ public struct MiniPlayerView: View {
                     ZStack {
                         Circle()
                             .fill(Color.accentColor)
-                            .frame(width: 32, height: 32)
+                            .frame(width: 36, height: 36)
                         Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 13.5, weight: .bold))
+                            .font(.system(size: 15, weight: .bold))
                             .foregroundColor(.white)
                             .offset(x: player.isPlaying ? 0 : 1.2)
                     }
@@ -258,7 +258,7 @@ public struct MiniPlayerView: View {
                     player.nextTrack()
                 } label: {
                     Image(systemName: "forward.fill")
-                        .font(.system(size: 13))
+                        .font(.system(size: 14.5))
                         .foregroundColor(.primary)
                 }
                 .buttonStyle(.plain)
@@ -269,7 +269,7 @@ public struct MiniPlayerView: View {
                     player.cycleRepeatMode()
                 } label: {
                     Image(systemName: player.repeatMode == .one ? "repeat.1" : "repeat")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: 12, weight: .semibold))
                         .foregroundColor(player.repeatMode != .off ? Color.accentColor : .secondary)
                 }
                 .buttonStyle(.plain)
@@ -295,13 +295,13 @@ public struct MiniPlayerView: View {
                 ZStack(alignment: .leading) {
                     Capsule()
                         .fill(Color.primary.opacity(0.16))
-                        .frame(height: 3.5)
+                        .frame(height: 4)
 
                     Capsule()
                         .fill(Color.primary.opacity(0.85))
-                        .frame(width: max(0, totalW * CGFloat(ratio)), height: 3.5)
+                        .frame(width: max(0, totalW * CGFloat(ratio)), height: 4)
                 }
-                .frame(height: 7)
+                .frame(height: 8)
                 .contentShape(Rectangle())
                 .gesture(
                     DragGesture(minimumDistance: 0)
@@ -320,27 +320,27 @@ public struct MiniPlayerView: View {
 
                 HStack {
                     Text(formatSeconds(current))
-                        .font(.system(size: 9))
+                        .font(.system(size: 10))
                         .foregroundColor(.secondary)
                     Spacer()
                     Text("-\(formatSeconds(max(0, duration - current)))")
-                        .font(.system(size: 9))
+                        .font(.system(size: 10))
                         .foregroundColor(.secondary)
                 }
                 .allowsHitTesting(false)
             }
         }
-        .frame(height: 20)
+        .frame(height: 22)
     }
 
     // MARK: - Volume Control
     private var volumeControlView: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 5) {
             Button {
                 player.isMuted.toggle()
             } label: {
                 Image(systemName: volumeIcon)
-                    .font(.system(size: 11))
+                    .font(.system(size: 12))
                     .foregroundColor(.secondary)
             }
             .buttonStyle(.plain)
@@ -349,8 +349,8 @@ public struct MiniPlayerView: View {
                 get: { Double(player.volume) },
                 set: { player.volume = Float($0) }
             ), in: 0...1)
-            .frame(width: 58)
-            .scaleEffect(0.76)
+            .frame(width: 68)
+            .scaleEffect(0.82)
         }
     }
 

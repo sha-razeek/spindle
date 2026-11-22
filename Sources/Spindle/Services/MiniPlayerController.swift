@@ -20,10 +20,9 @@ public final class MiniPlayerController: NSObject, NSWindowDelegate {
 
         if panel == nil {
             let p = NSPanel(
-                contentRect: NSRect(x: 0, y: 0, width: 540, height: 185),
+                contentRect: NSRect(x: 0, y: 0, width: 620, height: 215),
                 styleMask: [
                     .titled,
-                    .closable,
                     .fullSizeContentView,
                     .nonactivatingPanel,
                     .utilityWindow
@@ -41,18 +40,32 @@ public final class MiniPlayerController: NSObject, NSWindowDelegate {
             p.hasShadow = true
             p.delegate = self
 
+            // Remove traffic light close / minimize / zoom buttons from top-left
+            p.standardWindowButton(.closeButton)?.isHidden = true
+            p.standardWindowButton(.miniaturizeButton)?.isHidden = true
+            p.standardWindowButton(.zoomButton)?.isHidden = true
+            p.standardWindowButton(.closeButton)?.removeFromSuperview()
+            p.standardWindowButton(.miniaturizeButton)?.removeFromSuperview()
+            p.standardWindowButton(.zoomButton)?.removeFromSuperview()
+
             let hostingView = NSHostingView(
                 rootView: MiniPlayerView(player: AudioPlayer.shared) { [weak self] in
                     self?.expandToFullPlayer()
                 }
             )
             p.contentView = hostingView
-            p.setContentSize(NSSize(width: 540, height: 185))
+            p.setContentSize(NSSize(width: 620, height: 215))
             p.center()
             self.panel = p
         }
 
         guard let p = panel else { return }
+
+        // Ensure buttons stay hidden and size is 620x215
+        p.standardWindowButton(.closeButton)?.isHidden = true
+        p.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        p.standardWindowButton(.zoomButton)?.isHidden = true
+        p.setContentSize(NSSize(width: 620, height: 215))
 
         // Hide main window so the compact widget sits on the desktop
         mainWindow?.orderOut(nil)

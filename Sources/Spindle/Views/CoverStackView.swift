@@ -115,9 +115,27 @@ public struct CoverStackView: View {
         return ArtworkLoader.shared.defaultBackdropPalette
     }
 
-    public init(albums: [Album], player: AudioPlayer) {
+    public let showsAlphabetIndex: Bool
+
+    public init(albums: [Album], player: AudioPlayer, showsAlphabetIndex: Bool = true) {
         self.albums = albums
         self.player = player
+        self.showsAlphabetIndex = showsAlphabetIndex
+    }
+
+    private var isAlphabetical: Bool {
+        guard albums.count > 1 else { return false }
+        let sampleLimit = min(albums.count - 1, 30)
+        for i in 0..<sampleLimit {
+            if albums[i].title.localizedCaseInsensitiveCompare(albums[i + 1].title) == .orderedDescending {
+                return false
+            }
+        }
+        return true
+    }
+
+    private var shouldShowAlphabetIndex: Bool {
+        showsAlphabetIndex && isAlphabetical
     }
 
     public var body: some View {
@@ -391,17 +409,19 @@ public struct CoverStackView: View {
                         }
                         .padding(.top, 14)
                         .padding(.bottom, 140)
-                        .padding(.leading, 46) // Dedicated breathing space between alphabet index and albums
+                        .padding(.leading, shouldShowAlphabetIndex ? 46 : 24)
                         .padding(.trailing, 26) // Space for scrubber bar on right
                     }
                 }
                 .frame(width: 395)
 
-                // Left Alphabet Jump Index overlay
-                HStack {
-                    alphabetStrip(proxy: proxy)
-                        .padding(.leading, 8)
-                    Spacer()
+                // Left Alphabet Jump Index overlay (only shown when albums are in alphabetical order)
+                if shouldShowAlphabetIndex {
+                    HStack {
+                        alphabetStrip(proxy: proxy)
+                            .padding(.leading, 8)
+                        Spacer()
+                    }
                 }
 
                 // Quick Scrubber Bar on right edge

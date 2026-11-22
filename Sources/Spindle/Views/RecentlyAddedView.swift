@@ -50,7 +50,7 @@ public struct RecentlyAddedView: View {
                 case .grid:
                     albumsGridView
                 case .stack:
-                    CoverStackView(albums: albums, player: player)
+                    CoverStackView(albums: albums, player: player, showsAlphabetIndex: false)
                 }
             }
         }
