@@ -1,0 +1,32 @@
+name: Release Spindle DMG
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: macos-14
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Build and Package DMG
+        run: |
+          chmod +x scripts/build_app.sh scripts/create_dmg.sh
+          ./scripts/create_dmg.sh
+
+      - name: Create Release and Upload DMG
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: build/Spindle.dmg
+          generate_release_notes: true
