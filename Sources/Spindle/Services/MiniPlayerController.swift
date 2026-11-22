@@ -36,6 +36,7 @@ public final class MiniPlayerController: NSObject, NSWindowDelegate {
             p.titlebarAppearsTransparent = true
             p.titleVisibility = .hidden
             p.isMovableByWindowBackground = true
+            p.becomesKeyOnlyIfNeeded = true
             p.backgroundColor = .clear
             p.hasShadow = true
             p.delegate = self

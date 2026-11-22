@@ -306,11 +306,11 @@ struct ToolbarViewModeSwitcher: View {
         .padding(2.5)
         .background(
             Capsule()
-                .fill(Color.primary.opacity(0.06))
+                .fill(Color.white.opacity(0.18))
         )
         .overlay(
             Capsule()
-                .stroke(Color.primary.opacity(0.08), lineWidth: 0.8)
+                .stroke(Color.white.opacity(0.30), lineWidth: 0.8)
         )
         .frame(height: 28)
     }
@@ -320,15 +320,15 @@ struct ToolbarViewModeSwitcher: View {
         let isSelected = currentMode == mode
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
-                .foregroundColor(isSelected ? .primary : .secondary)
+                .font(.system(size: 12, weight: isSelected ? .bold : .medium))
+                .foregroundColor(isSelected ? Color.black.opacity(0.88) : Color.white.opacity(0.92))
                 .frame(width: 28, height: 23)
                 .background(
                     Group {
                         if isSelected {
                             Capsule()
-                                .fill(Color(NSColor.controlBackgroundColor))
-                                .shadow(color: Color.black.opacity(0.12), radius: 2, x: 0, y: 1)
+                                .fill(Color.white)
+                                .shadow(color: Color.black.opacity(0.25), radius: 2.5, x: 0, y: 1)
                         } else {
                             Color.clear
                         }
@@ -337,6 +337,8 @@ struct ToolbarViewModeSwitcher: View {
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        .focusable(false)
+        .focusEffectDisabled()
         .help(help)
     }
 }
@@ -368,11 +370,11 @@ struct ToolbarRecentlyAddedSwitcher: View {
         .padding(2.5)
         .background(
             Capsule()
-                .fill(Color.primary.opacity(0.06))
+                .fill(Color.white.opacity(0.18))
         )
         .overlay(
             Capsule()
-                .stroke(Color.primary.opacity(0.08), lineWidth: 0.8)
+                .stroke(Color.white.opacity(0.30), lineWidth: 0.8)
         )
         .frame(height: 28)
     }
@@ -382,15 +384,15 @@ struct ToolbarRecentlyAddedSwitcher: View {
         let isSelected = displayMode == mode
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
-                .foregroundColor(isSelected ? .primary : .secondary)
+                .font(.system(size: 12, weight: isSelected ? .bold : .medium))
+                .foregroundColor(isSelected ? Color.black.opacity(0.88) : Color.white.opacity(0.92))
                 .frame(width: 28, height: 23)
                 .background(
                     Group {
                         if isSelected {
                             Capsule()
-                                .fill(Color(NSColor.controlBackgroundColor))
-                                .shadow(color: Color.black.opacity(0.12), radius: 2, x: 0, y: 1)
+                                .fill(Color.white)
+                                .shadow(color: Color.black.opacity(0.25), radius: 2.5, x: 0, y: 1)
                         } else {
                             Color.clear
                         }
@@ -399,6 +401,8 @@ struct ToolbarRecentlyAddedSwitcher: View {
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        .focusable(false)
+        .focusEffectDisabled()
         .help(help)
     }
 }
@@ -412,13 +416,22 @@ struct ToolbarSearchField: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.secondary)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.white.opacity(0.90))
 
-            TextField(prompt, text: $query)
-                .textFieldStyle(.plain)
-                .font(.system(size: 12.5))
-                .focused($isFocused)
+            ZStack(alignment: .leading) {
+                if query.isEmpty {
+                    Text(prompt)
+                        .font(.system(size: 12.5))
+                        .foregroundColor(.white.opacity(0.65))
+                        .allowsHitTesting(false)
+                }
+                TextField("", text: $query)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 12.5))
+                    .foregroundColor(.white)
+                    .focused($isFocused)
+            }
 
             if !query.isEmpty {
                 Button {
@@ -426,9 +439,11 @@ struct ToolbarSearchField: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 11.5))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.white.opacity(0.85))
                 }
                 .buttonStyle(.plain)
+                .focusable(false)
+                .focusEffectDisabled()
             }
         }
         .padding(.horizontal, 10)
@@ -436,12 +451,12 @@ struct ToolbarSearchField: View {
         .frame(width: 200, height: 28)
         .background(
             Capsule()
-                .fill(Color.primary.opacity(0.06))
+                .fill(Color.white.opacity(0.18))
         )
         .overlay(
             Capsule()
                 .stroke(
-                    isFocused ? Color(red: 0.004, green: 0.471, blue: 0.941).opacity(0.85) : Color.primary.opacity(0.10),
+                    isFocused ? Color.white : Color.white.opacity(0.30),
                     lineWidth: isFocused ? 1.5 : 0.8
                 )
         )

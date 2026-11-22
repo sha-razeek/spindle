@@ -166,17 +166,19 @@ public struct MiniPlayerView: View {
 
                 Spacer()
 
-                // Transparent expand button
+                // Transparent expand button (no keyboard focus ring or blue border)
                 Button {
                     onExpand()
                 } label: {
                     Image(systemName: "arrow.up.left.and.arrow.down.right")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(.secondary)
-                        .padding(5)
-                        .contentShape(Rectangle())
+                        .font(.system(size: 11.5, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.85))
+                        .frame(width: 26, height: 26)
+                        .contentShape(Circle())
                 }
                 .buttonStyle(.plain)
+                .focusable(false)
+                .focusEffectDisabled()
                 .help("Expand to Full Player")
             }
 
@@ -212,8 +214,12 @@ public struct MiniPlayerView: View {
                     Image(systemName: "backward.fill")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(.primary.opacity(0.9))
+                        .frame(width: 28, height: 28)
+                        .contentShape(Circle())
                 }
                 .buttonStyle(.plain)
+                .focusable(false)
+                .focusEffectDisabled()
                 .help("Previous Track")
 
                 // Next Track
@@ -223,8 +229,12 @@ public struct MiniPlayerView: View {
                     Image(systemName: "forward.fill")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(.primary.opacity(0.9))
+                        .frame(width: 28, height: 28)
+                        .contentShape(Circle())
                 }
                 .buttonStyle(.plain)
+                .focusable(false)
+                .focusEffectDisabled()
                 .help("Next Track")
 
                 Spacer()
@@ -294,8 +304,12 @@ public struct MiniPlayerView: View {
                 Image(systemName: volumeIcon)
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
+                    .frame(width: 22, height: 22)
+                    .contentShape(Circle())
             }
             .buttonStyle(.plain)
+            .focusable(false)
+            .focusEffectDisabled()
 
             Slider(value: Binding(
                 get: { Double(player.volume) },
