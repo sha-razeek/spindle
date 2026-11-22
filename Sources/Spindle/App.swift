@@ -57,6 +57,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.async {
             for window in NSApplication.shared.windows {
                 window.titlebarAppearsTransparent = true
+                window.titlebarSeparatorStyle = .none
                 window.toolbar?.showsBaselineSeparator = false
                 window.styleMask.insert(.fullSizeContentView)
             }

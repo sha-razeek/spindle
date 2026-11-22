@@ -210,8 +210,7 @@ public struct ContentView: View {
             }
         }
         .navigationTitle("Spindle")
-        .toolbarBackground(.ultraThinMaterial, for: .windowToolbar)
-        .toolbarBackground(.visible, for: .windowToolbar)
+        .toolbarBackground(.hidden, for: .windowToolbar)
         .background(WindowTranslucencyConfigurator())
         .frame(minWidth: 900, minHeight: 600)
     }
@@ -242,13 +241,14 @@ public struct ContentView: View {
 }
 
 // MARK: - Window Translucency Configurator
-// Ensures the macOS top title bar and toolbar are translucent frosted glass like Apple Music
+// Ensures the macOS top title bar and toolbar are completely transparent like Apple Music
 struct WindowTranslucencyConfigurator: NSViewRepresentable {
     func makeNSView(context: Context) -> NSView {
         let view = NSView()
         DispatchQueue.main.async {
             guard let window = view.window else { return }
             window.titlebarAppearsTransparent = true
+            window.titlebarSeparatorStyle = .none
             window.toolbar?.showsBaselineSeparator = false
             window.styleMask.insert(.fullSizeContentView)
         }
@@ -261,6 +261,7 @@ struct WindowTranslucencyConfigurator: NSViewRepresentable {
             if !window.titlebarAppearsTransparent {
                 window.titlebarAppearsTransparent = true
             }
+            window.titlebarSeparatorStyle = .none
             if !window.styleMask.contains(.fullSizeContentView) {
                 window.styleMask.insert(.fullSizeContentView)
             }
