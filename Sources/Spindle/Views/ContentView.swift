@@ -352,16 +352,15 @@ struct WindowTranslucencyConfigurator: NSViewRepresentable {
         }
         window.toolbar?.showsBaselineSeparator = false
 
-        // Update window and titlebar appearance
-        let targetAppearance: NSAppearance? = isDark ? NSAppearance(named: .darkAqua) : nil
-        if window.appearance != targetAppearance {
-            window.appearance = targetAppearance
+        // Ensure window and content appearance remain in native mode (never force entire window into dark mode)
+        if window.appearance != nil {
+            window.appearance = nil
         }
 
-        // Apply appearance and tint to titlebar view hierarchy
+        // Apply appearance and tint to titlebar view hierarchy (title and sidebar button only)
         if let titlebarView = window.standardWindowButton(.closeButton)?.superview {
-            if titlebarView.appearance != targetAppearance {
-                titlebarView.appearance = targetAppearance
+            if titlebarView.appearance != nil {
+                titlebarView.appearance = nil
             }
             updateTitleAndSidebarViews(in: titlebarView, isDark: isDark)
         }
@@ -380,17 +379,19 @@ struct WindowTranslucencyConfigurator: NSViewRepresentable {
             if isSidebarItem {
                 btn.contentTintColor = isDark ? .white : nil
             }
-            btn.appearance = isDark ? NSAppearance(named: .darkAqua) : nil
+            if btn.appearance != nil {
+                btn.appearance = nil
+            }
         } else if let customView = item.view {
-            if customView.appearance != (isDark ? NSAppearance(named: .darkAqua) : nil) {
-                customView.appearance = isDark ? NSAppearance(named: .darkAqua) : nil
+            if customView.appearance != nil {
+                customView.appearance = nil
             }
             updateTitleAndSidebarViews(in: customView, isDark: isDark)
         }
     }
 
     private func updateTitleAndSidebarViews(in view: NSView, isDark: Bool) {
-        if let tf = view as? NSTextField {
+        if let tf = view as? NSTextField, !tf.isEditable {
             if tf.stringValue == "Spindle" || tf.stringValue == view.window?.title {
                 tf.textColor = isDark ? .white : .labelColor
             }
