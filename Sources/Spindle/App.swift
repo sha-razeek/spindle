@@ -40,6 +40,13 @@ struct SpindleApp: App {
                 }
                 .keyboardShortcut("r", modifiers: [.command, .shift])
             }
+
+            CommandMenu("Window") {
+                Button("Mini Player") {
+                    MiniPlayerController.shared.toggleMiniPlayer()
+                }
+                .keyboardShortcut("m", modifiers: [.command, .shift])
+            }
         }
     }
 }

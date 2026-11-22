@@ -54,6 +54,10 @@ public final class AudioPlayer: ObservableObject {
         set { progress.duration = newValue }
     }
 
+    /// Callback invoked when the active queue finishes its last track.
+    /// If it returns true, the caller has queued and started the next item/album.
+    public var onEndOfQueue: (() -> Bool)?
+
     @Published public var volume: Float = 1.0 {
         didSet {
             player?.volume = isMuted ? 0 : volume
@@ -220,7 +224,10 @@ public final class AudioPlayer: ObservableObject {
                 startPlayback(song: nextSong, url: loc)
             }
         } else {
-            // End of queue
+            // End of queue reached: notify handler (e.g. advance to next album in Vinyl Drawer)
+            if let onEndOfQueue = onEndOfQueue, onEndOfQueue() {
+                return
+            }
             player?.pause()
             isPlaying = false
             currentTime = 0

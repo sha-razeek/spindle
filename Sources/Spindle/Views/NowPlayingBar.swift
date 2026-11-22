@@ -261,6 +261,18 @@ public struct NowPlayingBar: View {
                             QueuePopoverView(player: player)
                         }
 
+                        // Mini Player button
+                        Button {
+                            MiniPlayerController.shared.showMiniPlayer()
+                        } label: {
+                            Image(systemName: "pip.enter")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.secondary)
+                                .frame(width: 20, height: 20)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Mini Player (⌘⇧M)")
+
                         // Speaker button (clicking expands the volume pill)
                         Button {
                             withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
@@ -278,7 +290,7 @@ public struct NowPlayingBar: View {
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
                 }
             }
-            .frame(width: isVolumeExpanded ? 140 : 85, alignment: .trailing)
+            .frame(width: isVolumeExpanded ? 140 : 108, alignment: .trailing)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 4)

@@ -62,6 +62,7 @@ public struct CoverStackView: View {
 
     @State private var deckAlbum: Album?
     @State private var selectedAlbumForDetail: Album?
+    @State private var scrollToAlbumID: String? = nil
 
     // Static cached title trimming character set to avoid per-album allocations
     private static let titleTrimSet = CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: "\"'`“‘([{"))
@@ -204,12 +205,17 @@ public struct CoverStackView: View {
                 if deckAlbum == nil {
                     deckAlbum = currentlyPlayingAlbum
                 }
+                setupEndOfQueueHandler()
+            }
+            .onDisappear {
+                player.onEndOfQueue = nil
             }
             .onChange(of: albums.count) { _, _ in
                 buildLetterMap()
                 if deckAlbum == nil {
                     deckAlbum = currentlyPlayingAlbum
                 }
+                setupEndOfQueueHandler()
             }
             .onChange(of: player.currentSong?.id) { _, newSongID in
                 guard newSongID != nil else { return }
@@ -220,6 +226,48 @@ public struct CoverStackView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Vinyl Drawer Continuous Album Playback
+    private func setupEndOfQueueHandler() {
+        player.onEndOfQueue = { [weak player] in
+            guard player != nil else { return false }
+            return playNextAlbumInDrawer()
+        }
+    }
+
+    @discardableResult
+    private func playNextAlbumInDrawer() -> Bool {
+        guard !albums.isEmpty else { return false }
+
+        // Find the index of the finished album in the active Vinyl Drawer
+        let currentAlbum = activeDeckAlbum ?? currentlyPlayingAlbum
+        var nextAlbum: Album? = nil
+
+        if let current = currentAlbum, let currentIndex = albums.firstIndex(where: { $0.id == current.id }) {
+            let nextIndex = currentIndex + 1
+            if nextIndex < albums.count {
+                nextAlbum = albums[nextIndex]
+            } else if player.repeatMode == .all {
+                nextAlbum = albums[0]
+            }
+        } else if let first = albums.first {
+            nextAlbum = first
+        }
+
+        guard let target = nextAlbum, let firstSong = target.songs.first else {
+            return false
+        }
+
+        // Animate turntable deck and drawer scroll to the newly loaded album
+        withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) {
+            deckAlbum = target
+            scrollToAlbumID = target.id
+        }
+
+        // Start playback with the next album's tracklist as context
+        player.play(song: firstSong, inContext: target.songs)
+        return true
     }
 
     private var isCurrentlyPlayingActiveDeckAlbum: Bool {
@@ -384,6 +432,13 @@ public struct CoverStackView: View {
             }
             .frame(width: 395)
             .background(Color.black.opacity(0.18))
+            .onChange(of: scrollToAlbumID) { _, targetID in
+                if let id = targetID {
+                    withAnimation(.spring(response: 0.42, dampingFraction: 0.80)) {
+                        proxy.scrollTo(id, anchor: .center)
+                    }
+                }
+            }
         }
     }
 
