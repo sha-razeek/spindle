@@ -13,6 +13,14 @@ public struct ArtworkView: View {
         self.song = song
         self.cornerRadius = cornerRadius
         self.size = size
+
+        if let s = song {
+            if size <= 400, let cached = ArtworkLoader.shared.cachedThumbnail(for: s) {
+                _image = State(initialValue: cached)
+            } else if let cached = ArtworkLoader.shared.cachedImage(for: s) {
+                _image = State(initialValue: cached)
+            }
+        }
     }
 
     public var body: some View {
@@ -50,12 +58,22 @@ public struct ArtworkView: View {
             return
         }
 
-        if let cached = ArtworkLoader.shared.cachedImage(for: song) {
+        if image != nil { return }
+
+        if size <= 400, let cached = ArtworkLoader.shared.cachedThumbnail(for: song) {
+            self.image = cached
+            return
+        } else if let cached = ArtworkLoader.shared.cachedImage(for: song) {
             self.image = cached
             return
         }
 
-        let loaded = await ArtworkLoader.shared.loadArtwork(for: song)
+        let loaded: NSImage?
+        if size <= 400 {
+            loaded = await ArtworkLoader.shared.loadThumbnail(for: song, maxPixelSize: max(120, size * 2.5))
+        } else {
+            loaded = await ArtworkLoader.shared.loadArtwork(for: song)
+        }
         self.image = loaded
     }
 }

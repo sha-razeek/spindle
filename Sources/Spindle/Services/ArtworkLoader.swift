@@ -31,15 +31,18 @@ public final class ArtworkLoader: @unchecked Sendable {
     public static let shared = ArtworkLoader()
 
     private let cache = NSCache<NSString, NSImage>()
+    private let thumbnailCache = NSCache<NSString, NSImage>()
     private let colorCache = NSCache<NSString, SpineColors>()
     private let backdropCache = NSCache<NSString, BackdropPalette>()
     private var itunesLibrary: ITLibrary?
     private var itemsByPID: [UInt64: ITLibMediaItem] = [:]
     private var inFlightTasks: [String: Task<NSImage?, Never>] = [:]
+    private var inFlightThumbnails: [String: Task<NSImage?, Never>] = [:]
     private let lock = NSLock()
 
     public init() {
-        cache.countLimit = 2500
+        cache.countLimit = 1500
+        thumbnailCache.countLimit = 3500
         colorCache.countLimit = 5000
         backdropCache.countLimit = 5000
     }
@@ -68,6 +71,91 @@ public final class ArtworkLoader: @unchecked Sendable {
 
     public func cachedImage(for song: Song) -> NSImage? {
         cache.object(forKey: song.id as NSString)
+    }
+
+    public func cachedThumbnail(for song: Song) -> NSImage? {
+        thumbnailCache.object(forKey: song.id as NSString) ?? cache.object(forKey: song.id as NSString)
+    }
+
+    public func preheatThumbnails(for albums: [Album], count: Int = 35) {
+        let slice = Array(albums.prefix(count))
+        Task.detached(priority: .utility) { [weak self] in
+            guard let self = self else { return }
+            for album in slice {
+                guard let song = album.representativeSong else { continue }
+                if self.cachedThumbnail(for: song) == nil {
+                    _ = await self.loadThumbnail(for: song, maxPixelSize: 380)
+                }
+            }
+        }
+    }
+
+    public func loadThumbnail(for song: Song, maxPixelSize: CGFloat = 380) async -> NSImage? {
+        if Task.isCancelled { return nil }
+
+        let songID = song.id
+        let cacheKey = songID as NSString
+        if let cached = thumbnailCache.object(forKey: cacheKey) {
+            return cached
+        }
+        if let cachedLarge = cache.object(forKey: cacheKey) {
+            return cachedLarge
+        }
+
+        let pid = song.persistentID
+        let itItem = withLock { itemsByPID[UInt64(pid)] }
+        let location = song.location
+
+        let task = withLock { () -> Task<NSImage?, Never> in
+            if let existing = self.inFlightThumbnails[songID] {
+                return existing
+            }
+            let newTask = Task.detached(priority: .userInitiated) { [weak self, itItem, location, songID] () -> NSImage? in
+                guard let self = self else { return nil }
+                if Task.isCancelled { return nil }
+
+                var loadedThumb: NSImage? = nil
+
+                // 1. Try reading iTunes Library artwork data at thumbnail size
+                if let itItem = itItem, let art = itItem.artwork {
+                    if let data = art.imageData, let img = self.createThumbnail(from: data, maxPixelSize: maxPixelSize) {
+                        loadedThumb = img
+                    } else if let img = art.image {
+                        loadedThumb = self.downsample(image: img, maxPixelSize: maxPixelSize)
+                    }
+                }
+
+                // 2. Fallback: extract embedded artwork directly from the audio file using AVAsset
+                if loadedThumb == nil, let location = location {
+                    if let img = await self.extractArtworkFromFile(url: location) {
+                        loadedThumb = self.downsample(image: img, maxPixelSize: maxPixelSize)
+                    }
+                }
+
+                guard let thumb = loadedThumb else { return nil }
+                if Task.isCancelled { return nil }
+
+                let key = songID as NSString
+                self.thumbnailCache.setObject(thumb, forKey: key)
+
+                // Pre-calculate spine colors in background thread
+                let colors = self.extractSpineColor(from: thumb)
+                self.colorCache.setObject(SpineColors(bg: colors.bg, text: colors.text), forKey: key)
+
+                return thumb
+            }
+            self.inFlightThumbnails[songID] = newTask
+            return newTask
+        }
+
+        let result = await task.value
+
+        withLock {
+            _ = self.inFlightThumbnails.removeValue(forKey: songID)
+        }
+
+        if Task.isCancelled { return nil }
+        return result
     }
 
     public func loadArtwork(for song: Song) async -> NSImage? {

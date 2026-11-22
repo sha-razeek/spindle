@@ -21,8 +21,21 @@ public enum RepeatMode: String, CaseIterable, Identifiable {
 }
 
 @MainActor
+public final class PlaybackProgress: ObservableObject {
+    @Published public var currentTime: TimeInterval = 0
+    @Published public var duration: TimeInterval = 0
+
+    public var progress: Double {
+        guard duration > 0 else { return 0 }
+        return min(1.0, max(0.0, currentTime / duration))
+    }
+}
+
+@MainActor
 public final class AudioPlayer: ObservableObject {
     public static let shared = AudioPlayer()
+
+    public let progress = PlaybackProgress()
 
     private var player: AVPlayer?
     private var timeObserverToken: Any?
@@ -30,8 +43,17 @@ public final class AudioPlayer: ObservableObject {
 
     @Published public private(set) var currentSong: Song?
     @Published public private(set) var isPlaying: Bool = false
-    @Published public var currentTime: TimeInterval = 0
-    @Published public var duration: TimeInterval = 0
+
+    public var currentTime: TimeInterval {
+        get { progress.currentTime }
+        set { progress.currentTime = newValue }
+    }
+
+    public var duration: TimeInterval {
+        get { progress.duration }
+        set { progress.duration = newValue }
+    }
+
     @Published public var volume: Float = 1.0 {
         didSet {
             player?.volume = isMuted ? 0 : volume

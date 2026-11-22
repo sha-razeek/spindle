@@ -4,6 +4,7 @@ import AppKit
 public struct ExpandedNowPlayingView: View {
     @ObservedObject var player: AudioPlayer
     @ObservedObject var library: LibraryManager
+    @ObservedObject private var progress = AudioPlayer.shared.progress
     @Binding var isPresented: Bool
 
     @State private var animateGradients: Bool = false

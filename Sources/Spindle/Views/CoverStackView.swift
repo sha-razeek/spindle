@@ -37,13 +37,19 @@ private struct CoverBackdropView: View, Equatable {
             )
             .ignoresSafeArea()
 
-            // Ambient glowing color aura
-            Circle()
-                .fill(backdrop.primary.opacity(0.35))
-                .frame(width: 700, height: 700)
-                .offset(x: -120, y: -40)
-                .blur(radius: 130)
-                .allowsHitTesting(false)
+            // Ambient glowing color aura (hardware accelerated radial gradient)
+            RadialGradient(
+                colors: [
+                    backdrop.primary.opacity(0.35),
+                    backdrop.primary.opacity(0.18),
+                    Color.clear
+                ],
+                center: .init(x: 0.16, y: 0.38),
+                startRadius: 30,
+                endRadius: 520
+            )
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
         }
         .animation(.easeInOut(duration: 0.80), value: songID)
         .allowsHitTesting(false)
@@ -57,12 +63,16 @@ public struct CoverStackView: View {
     @State private var deckAlbum: Album?
     @State private var selectedAlbumForDetail: Album?
 
+    // Static cached title trimming character set to avoid per-album allocations
+    private static let titleTrimSet = CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: "\"'`“‘([{"))
+
     // Alphabet Index State
     private let alphabet: [String] = ["#"] + (65...90).map { String(UnicodeScalar($0)!) }
     @State private var activeLetter: String? = nil
     @State private var hoveredLetter: String? = nil
     @State private var letterMap: [String: Album] = [:]
     @State private var letterIndices: [String: Int] = [:]
+    @State private var songToAlbumMap: [String: Album] = [:]
     @State private var showLetterHUD: Bool = false
     @State private var hudLetter: String? = nil
     @State private var hudDismissTask: Task<Void, Never>? = nil
@@ -78,6 +88,9 @@ public struct CoverStackView: View {
 
     private var currentlyPlayingAlbum: Album? {
         guard let song = player.currentSong else { return nil }
+        if let match = songToAlbumMap[song.id] {
+            return match
+        }
         if let match = albums.first(where: { $0.songs.contains(where: { $0.id == song.id }) }) {
             return match
         }
@@ -307,29 +320,29 @@ public struct CoverStackView: View {
 
                     // Scrollable 3D LP Album Crate (Real stacked LPs with 3D perspective)
                     ScrollView(.vertical, showsIndicators: false) {
-                        VStack(spacing: 0) {
-                            Color.clear.frame(height: 14)
+                        let activeDeckID = activeDeckAlbum?.id
+                        let playingAlbumID = currentlyPlayingAlbum?.id
+                        let isAudioPlaying = player.isPlaying
 
-                            LazyVStack(spacing: 0) {
-                                ForEach(albums) { album in
-                                    let isSelected = (activeDeckAlbum?.id == album.id)
-                                    let isPlayingThis = (currentlyPlayingAlbum?.id == album.id && player.isPlaying)
+                        LazyVStack(spacing: 0) {
+                            ForEach(albums) { album in
+                                let isSelected = (activeDeckID == album.id)
+                                let isPlayingThis = (playingAlbumID == album.id && isAudioPlaying)
 
-                                    CrateLPSlabView(
-                                        album: album,
-                                        isSelected: isSelected,
-                                        isPlaying: isPlayingThis,
-                                        onSelect: {
-                                            handleAlbumSelect(album: album)
-                                        }
-                                    )
-                                    .equatable()
-                                    .id(album.id)
-                                }
+                                CrateLPSlabView(
+                                    album: album,
+                                    isSelected: isSelected,
+                                    isPlaying: isPlayingThis,
+                                    onSelect: {
+                                        handleAlbumSelect(album: album)
+                                    }
+                                )
+                                .equatable()
+                                .id(album.id)
                             }
-
-                            Color.clear.frame(height: 140)
                         }
+                        .padding(.top, 14)
+                        .padding(.bottom, 140)
                         .padding(.leading, 46) // Dedicated breathing space between alphabet index and albums
                         .padding(.trailing, 26) // Space for scrubber bar on right
                     }
@@ -525,7 +538,7 @@ public struct CoverStackView: View {
 
     // MARK: - Alphabet & Scrubber Helpers
     private func initialLetter(for title: String) -> String {
-        let stripped = title.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: "\"'`“‘([{")))
+        let stripped = title.trimmingCharacters(in: Self.titleTrimSet)
         guard let firstChar = stripped.first else { return "#" }
         let s = String(firstChar).uppercased()
         if s >= "A" && s <= "Z" {
@@ -537,15 +550,21 @@ public struct CoverStackView: View {
     private func buildLetterMap() {
         var map: [String: Album] = [:]
         var indices: [String: Int] = [:]
+        var songMap: [String: Album] = [:]
         for (index, album) in albums.enumerated() {
             let letter = initialLetter(for: album.title)
             if map[letter] == nil {
                 map[letter] = album
                 indices[letter] = index
             }
+            for song in album.songs {
+                songMap[song.id] = album
+            }
         }
         self.letterMap = map
         self.letterIndices = indices
+        self.songToAlbumMap = songMap
+        ArtworkLoader.shared.preheatThumbnails(for: albums, count: 35)
     }
 
     private func jumpToLetter(_ letter: String, proxy: ScrollViewProxy) {

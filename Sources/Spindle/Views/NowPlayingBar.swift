@@ -5,11 +5,8 @@ public struct NowPlayingBar: View {
     @ObservedObject var player: AudioPlayer
     var onExpand: (() -> Void)? = nil
 
-    @State private var isDraggingScrubber: Bool = false
-    @State private var scrubTime: TimeInterval = 0
     @State private var showQueuePopover: Bool = false
     @State private var isHoveringThumbnail: Bool = false
-    @State private var isHoveringScrubber: Bool = false
 
     // Volume control expansion state (only expanded when clicked)
     @State private var isVolumeExpanded: Bool = false
@@ -128,42 +125,8 @@ public struct NowPlayingBar: View {
                             .contentShape(Rectangle())
                             .onTapGesture { onExpand?() }
 
-                        // Sleek Progress Scrubber running underneath (matching Image 1 & 2)
-                        GeometryReader { geo in
-                            let totalWidth = geo.size.width
-                            let progress = scrubberProgress
-
-                            ZStack(alignment: .leading) {
-                                // Background track
-                                Capsule()
-                                    .fill(Color.primary.opacity(0.18))
-                                    .frame(height: isHoveringScrubber || isDraggingScrubber ? 3.5 : 2.5)
-
-                                // Filled track
-                                Capsule()
-                                    .fill(Color.primary.opacity(0.85))
-                                    .frame(width: max(0, totalWidth * CGFloat(progress)), height: isHoveringScrubber || isDraggingScrubber ? 3.5 : 2.5)
-                            }
-                            .frame(maxHeight: .infinity, alignment: .center)
-                            .contentShape(Rectangle())
-                            .gesture(
-                                DragGesture(minimumDistance: 0)
-                                    .onChanged { value in
-                                        isDraggingScrubber = true
-                                        let ratio = max(0.0, min(1.0, Double(value.location.x / totalWidth)))
-                                        scrubTime = ratio * max(1.0, player.duration)
-                                    }
-                                    .onEnded { value in
-                                        let ratio = max(0.0, min(1.0, Double(value.location.x / totalWidth)))
-                                        let target = ratio * max(1.0, player.duration)
-                                        player.seek(to: target)
-                                        isDraggingScrubber = false
-                                    }
-                            )
-                        }
-                        .frame(height: 7)
-                        .onHover { isHoveringScrubber = $0 }
-                        .help(isDraggingScrubber ? formatSeconds(scrubTime) : "\(player.formattedCurrentTime) / \(formatSeconds(player.duration))")
+                        // Sleek Progress Scrubber running underneath (isolated observable to avoid whole-bar re-renders)
+                        SleekProgressScrubber(progress: player.progress, player: player)
                     }
                     .frame(maxWidth: 240, alignment: .leading)
                 } else {
@@ -363,12 +326,6 @@ public struct NowPlayingBar: View {
         .shadow(color: Color.black.opacity(0.06), radius: 4, x: 0, y: 1.5)
     }
 
-    private var scrubberProgress: Double {
-        let duration = max(1.0, player.duration)
-        let current = isDraggingScrubber ? scrubTime : player.currentTime
-        return min(1.0, max(0.0, current / duration))
-    }
-
     private var volumeIcon: String {
         if player.isMuted || player.volume == 0 {
             return "speaker.slash.fill"
@@ -379,6 +336,54 @@ public struct NowPlayingBar: View {
         } else {
             return "speaker.wave.3.fill"
         }
+    }
+}
+
+// MARK: - Isolated Sleek Progress Scrubber (Updates at 4Hz without invalidating NowPlayingBar)
+private struct SleekProgressScrubber: View {
+    @ObservedObject var progress: PlaybackProgress
+    let player: AudioPlayer
+
+    @State private var isHoveringScrubber: Bool = false
+    @State private var isDraggingScrubber: Bool = false
+    @State private var scrubTime: TimeInterval = 0
+
+    var body: some View {
+        GeometryReader { geo in
+            let totalWidth = geo.size.width
+            let duration = max(1.0, progress.duration)
+            let current = isDraggingScrubber ? scrubTime : progress.currentTime
+            let currentRatio = min(1.0, max(0.0, current / duration))
+
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.primary.opacity(0.18))
+                    .frame(height: isHoveringScrubber || isDraggingScrubber ? 3.5 : 2.5)
+
+                Capsule()
+                    .fill(Color.primary.opacity(0.85))
+                    .frame(width: max(0, totalWidth * CGFloat(currentRatio)), height: isHoveringScrubber || isDraggingScrubber ? 3.5 : 2.5)
+            }
+            .frame(maxHeight: .infinity, alignment: .center)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        isDraggingScrubber = true
+                        let ratio = max(0.0, min(1.0, Double(value.location.x / totalWidth)))
+                        scrubTime = ratio * duration
+                    }
+                    .onEnded { value in
+                        let ratio = max(0.0, min(1.0, Double(value.location.x / totalWidth)))
+                        let target = ratio * duration
+                        player.seek(to: target)
+                        isDraggingScrubber = false
+                    }
+            )
+        }
+        .frame(height: 7)
+        .onHover { isHoveringScrubber = $0 }
+        .help(isDraggingScrubber ? formatSeconds(scrubTime) : "\(formatSeconds(progress.currentTime)) / \(formatSeconds(progress.duration))")
     }
 
     private func formatSeconds(_ seconds: TimeInterval) -> String {

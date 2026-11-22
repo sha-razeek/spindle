@@ -9,8 +9,8 @@ public struct CrateLPSlabView: View, Equatable {
 
     @State private var artworkImage: NSImage?
     @State private var isHovered: Bool = false
-    @State private var spineBgColor: Color = Color(red: 0.22, green: 0.26, blue: 0.30)
-    @State private var spineTextColor: Color = .white
+    @State private var spineBgColor: Color
+    @State private var spineTextColor: Color
 
     public static func == (lhs: CrateLPSlabView, rhs: CrateLPSlabView) -> Bool {
         lhs.album.id == rhs.album.id &&
@@ -28,6 +28,17 @@ public struct CrateLPSlabView: View, Equatable {
         self.isSelected = isSelected
         self.isPlaying = isPlaying
         self.onSelect = onSelect
+
+        let initialColors = ArtworkLoader.shared.spineColors(for: album.representativeSong, fallbackID: album.id)
+        _spineBgColor = State(initialValue: initialColors.bg)
+        _spineTextColor = State(initialValue: initialColors.text)
+
+        if let song = album.representativeSong,
+           let cached = ArtworkLoader.shared.cachedThumbnail(for: song) {
+            _artworkImage = State(initialValue: cached)
+        } else {
+            _artworkImage = State(initialValue: nil)
+        }
     }
 
     public var body: some View {
@@ -100,12 +111,6 @@ public struct CrateLPSlabView: View, Equatable {
                     UnevenRoundedRectangle(topLeadingRadius: 6.5, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 6.5, style: .continuous)
                         .stroke(isSelected ? Color.white.opacity(0.85) : Color.clear, lineWidth: 1.5)
                 )
-                .shadow(
-                    color: Color.black.opacity(isSelected ? 0.40 : 0.20),
-                    radius: isSelected ? 6 : 3,
-                    x: 0,
-                    y: isSelected ? 3 : 1.5
-                )
                 .zIndex(10)
 
                 // Front Album Artwork Jacket
@@ -122,10 +127,10 @@ public struct CrateLPSlabView: View, Equatable {
                 perspective: 0.38
             )
             .shadow(
-                color: Color.black.opacity(isSelected ? 0.50 : (isHovered ? 0.46 : 0.22)),
-                radius: isSelected ? 12 : (isHovered ? 14 : 4),
+                color: Color.black.opacity(isSelected ? 0.45 : (isHovered ? 0.40 : 0.18)),
+                radius: isSelected ? 9 : (isHovered ? 11 : 3.5),
                 x: 0,
-                y: isSelected ? 8 : (isHovered ? 10 : 2.5)
+                y: isSelected ? 6 : (isHovered ? 7 : 2)
             )
             .zIndex(2)
         }
@@ -201,23 +206,15 @@ public struct CrateLPSlabView: View, Equatable {
     }
 
     private func loadArtworkAndSpine() async {
-        let song = album.representativeSong
-        let initialColors = ArtworkLoader.shared.spineColors(for: song, fallbackID: album.id)
-        self.spineBgColor = initialColors.bg
-        self.spineTextColor = initialColors.text
+        guard artworkImage == nil else { return }
+        guard let targetSong = album.representativeSong else { return }
 
-        guard let targetSong = song else { return }
-
-        if let cached = ArtworkLoader.shared.cachedImage(for: targetSong) {
+        if let cached = ArtworkLoader.shared.cachedThumbnail(for: targetSong) {
             self.artworkImage = cached
             return
         }
 
-        // Brief debounce to keep fast scrolling silky smooth
-        try? await Task.sleep(nanoseconds: 80_000_000)
-        guard !Task.isCancelled else { return }
-
-        if let loaded = await ArtworkLoader.shared.loadArtwork(for: targetSong) {
+        if let loaded = await ArtworkLoader.shared.loadThumbnail(for: targetSong, maxPixelSize: 380) {
             guard !Task.isCancelled else { return }
             self.artworkImage = loaded
             let updatedColors = ArtworkLoader.shared.spineColors(for: targetSong, fallbackID: album.id)
